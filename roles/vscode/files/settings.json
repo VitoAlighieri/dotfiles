@@ -1,0 +1,177 @@
+{
+    /***--------------- Workbench Configurations ---------------**/
+    "workbench.iconTheme": "catppuccin-macchiato",
+    "workbench.layoutControl.enabled": false,
+    "workbench.editor.showTabs": "multiple",
+    "workbench.colorTheme": "Catppuccin Macchiato",
+    "workbench.tree.enableStickyScroll": false,
+    "workbench.editor.enablePreview": false,
+    "workbench.statusBar.visible": true,
+    "workbench.tips.enabled": false,
+    /***--------------- Breadcrumbs Configurations ---------------**/
+    "breadcrumbs.enabled": false,
+    "breadcrumbs.symbolPath": "off",
+    "breadcrumbs.filePath": "on",
+    /***--------------- Editor Configurations ---------------**/
+    "editor.fontFamily": "JetBrainsMono Nerd Font",
+    "editor.fontSize": 14,
+    "editor.fontWeight": 400,
+    "editor.lineHeight": 19,
+    "editor.lineNumbers": "on",
+    "editor.glyphMargin": true,
+    "editor.guides.indentation": false,
+    "editor.scrollbar.horizontal": "visible",
+    "editor.cursorStyle": "line-thin",
+    "editor.cursorSurroundingLines": 10,
+    "editor.minimap.enabled": false,
+    "editor.wordWrap": "on",
+    "editor.snippetSuggestions": "top",
+    "editor.detectIndentation": false,
+    "editor.hover.delay": 450,
+    "editor.hover.enabled": true,
+    /***--------------- Window Configurations ---------------**/
+    "window.newWindowDimensions": "inherit",
+    "window.commandCenter": false,
+    "window.density.editorTabHeight": "compact",
+    "window.menuBarVisibility": "compact", 
+    /**--------------- Terminal Configurations ---------------**/
+    "terminal.integrated.fontSize": 13,
+    "terminal.integrated.enableMultiLinePasteWarning": "always",
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.lineHeight": 1.2,
+    /**--------------- Vim Configurations ---------------**/
+    "vim.useSystemClipboard": true,
+    "vim.hlsearch": true,
+    "vim.useCtrlKeys": true,
+    "vim.smartRelativeLine": true,
+    "vim.highlightedyank.enable": true,
+    "vim.highlightedyank.color": "rgba(198, 160, 246, 0.5)",
+    "vim.highlightedyank.textColor": "#f5a97f",
+    "vim.highlightedyank.duration": 300,
+    /**--------------- WichKey Configurations ---------------**/
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "<space>"
+            ],
+            "commands": [
+                "whichkey.show"
+            ]
+        }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        {
+            "before": [
+                "<space>"
+            ],
+            "commands": [
+                "whichkey.show"
+            ]
+        }
+    ],
+    "whichkey.useFullWidthCharacters": true,
+    "whichkey.bindingOverrides": [],
+    "whichkey.bindings": [
+        {
+            "key": "c",
+            "name": "[C]ode",
+            "type": "bindings",
+            "bindings": [
+                {
+                    "key": "a",
+                    "name": "[C]ode [A]ctions",
+                    "type": "command",
+                    "command": "editor.action.quickFix"
+                }
+            ]
+        },
+        {
+            "key": "f",
+            "name": "[F]ind",
+            "type": "bindings",
+            "bindings": [
+                {
+                    "key": "f",
+                    "name": "[F]ind [F]iles",
+                    "type": "command",
+                    "command": "workbench.action.quickOpen"
+                },
+                {
+                    "key": "k",
+                    "name": "[F]ind [K]eybindings",
+                    "type": "command",
+                    "command": "workbench.action.openGlobalKeybindings"
+                },
+                {
+                    "key": "z",
+                    "name": "[F]uzzy [S]earch in current buffer",
+                    "type": "command",
+                    "command": "fuzzySearch.activeTextEditor"
+                }
+            ]
+        },
+        {
+            "key": "g",
+            "name": "[G]oto",
+            "type": "bindings",
+            "bindings": [
+                {
+                    "key": "d",
+                    "name": "[G]oto [D]efinition",
+                    "type": "command",
+                    "command": "editor.action.revealDefinition"
+                },
+                {
+                    "key": "i",
+                    "name": "[G]oto [I]mplementation",
+                    "type": "command",
+                    "command": "editor.action.goToImplementation"
+                },
+                {
+                    "key": "r",
+                    "name": "[G]oto [R]eference",
+                    "type": "command",
+                    "command": "editor.action.referenceSearch.trigger"
+                },
+                {
+                    "key": "t",
+                    "name": "[G]oto [T]ype Definition",
+                    "type": "command",
+                    "command": "editor.action.goToTypeDefinition"
+                },
+                {
+                    "key": "D",
+                    "name": "[G]oto [D]eclaration",
+                    "type": "command",
+                    "command": "editor.action.revealDeclaration"
+                }
+            ]
+        },
+        {
+            "key": "r",
+            "name": "[R]efactor",
+            "type": "bindings",
+            "bindings": [
+                {
+                    "key": "c",
+                    "name": "[R]efactor [C]ode",
+                    "type": "command",
+                    "command": "editor.action.refactor"
+                },
+                {
+                    "key": "r",
+                    "name": "[R]ename symbol",
+                    "type": "command",
+                    "command": "editor.action.rename"
+                }
+            ]
+        },
+        {
+            "key": "t",
+            "name": "Open file [t]ree",
+            "type": "command",
+            "command": "workbench.view.explorer"
+        }
+    ]
+}
