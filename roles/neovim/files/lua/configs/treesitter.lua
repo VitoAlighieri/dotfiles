@@ -1,7 +1,8 @@
 local options = {
   ensure_installed = {
     "bash",
-    -- "c",
+    "c",
+    "c_sharp",
     "java",
     "lua",
     "luadoc",

@@ -9,6 +9,8 @@ local lspconfig = require "lspconfig"
 lspconfig.servers = {
   "lua_ls",
   "pyright",
+  "omnisharp",
+  "bash-language-server",
 }
 
 local default_servers = { "clangd" }
@@ -22,13 +24,6 @@ for _, lsp in ipairs(default_servers) do
     capabilities = nvlsp.capabilities,
   }
 end
-
--- configuring single server, example: typescript
--- lspconfig.ts_ls.setup {
---   on_attach = nvlsp.on_attach,
---   on_init = nvlsp.on_init,
---   capabilities = nvlsp.capabilities,
--- }
 
 lspconfig.lua_ls.setup {
   on_attach = on_attach,
@@ -70,4 +65,30 @@ lspconfig.pyright.setup {
       },
     },
   },
+}
+
+lspconfig.omnisharp.setup {
+  on_attach = on_attach,
+  on_init = on_init,
+  capabilities = capabilities,
+
+  cmd = { "omnisharp" },
+  root_dir = function(fname)
+    return require("lspconfig").util.find_git_ancestor(fname) or require("lspconfig").util.path.dirname(fname)
+  end,
+
+  RoslynExtensionsOptions = {
+    EnableAnalyzersSupport = true,
+    EnableImportCompletion = true,
+    AnalyzeOpenDocumentsOnly = false,
+  },
+}
+
+lspconfig.bashls.setup {
+  on_attach = on_attach,
+  on_init = on_init,
+  capabilities = capabilities,
+
+  cmd = { "bash-language-server", "start" },
+  filetypes = { "bash", "sh", "make" },
 }
