@@ -98,7 +98,7 @@
                     "command": "workbench.action.quickOpen"
                 },
                 {
-                    "key": "k",
+                    "key": "?",
                     "name": "[F]ind [K]eybindings",
                     "type": "command",
                     "command": "workbench.action.openGlobalKeybindings"
