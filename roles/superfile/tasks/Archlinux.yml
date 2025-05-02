@@ -1,0 +1,42 @@
+---
+- name: "Superfile | Download Latest Version JSON"
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/yorukot/superfile/releases/latest
+  register: superfile_latest_version_json
+  changed_when: false
+
+- name: "Superfile | Registering Superfile Latest Release"
+  ansible.builtin.set_fact:
+    superfile_latest_release: "{{ superfile_latest_version_json.json.tag_name }}"
+
+- name: "Superfile | Registering Superfile Latest Version"
+  ansible.builtin.set_fact:
+    superfile_latest_version: "{{ superfile_latest_release.stdout | default('') }}"
+
+- name: "Superfile | Getting version information"
+  ansible.builtin.command:
+    cmd: spf --version
+  register: current_superfile_version
+  changed_when: false
+  failed_when: false
+
+- name: "Superfile | Edit current_superfile_version"
+  ansible.builtin.set_fact:
+    current_superfile_version: "{{ current_superfile_version.stdout.split(' ')[-1] | default('') }}"
+
+- name: "Superfile | Show current_superfile_version debug"
+  ansible.builtin.debug:
+    var: current_superfile_version
+
+- name: "Superfile | Show superfile_latest_release debug"
+  ansible.builtin.debug:
+    var: superfile_latest_release
+
+- name: "Superfile | Install"
+  when: superfile_latest_release | regex_replace('^.', '') not in current_superfile_version|default('')
+  block:
+    - name: "Superfile | Install Superfile"
+      community.general.pacman:
+        name: spf
+        state: present
+      become: true

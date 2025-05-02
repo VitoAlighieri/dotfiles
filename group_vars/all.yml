@@ -31,6 +31,7 @@ default_roles:
   - rofi
   # - ssh
   # - sshfs
+  - superfile
   # - terraform
   # - tldr
   # - tmate
