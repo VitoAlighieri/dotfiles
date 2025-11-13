@@ -211,9 +211,9 @@ update_ansible_galaxy
 _task "Running playbook"
 _task_done
 if [[ -f $VAULT_SECRET ]]; then
-    ansible-playbook --vault-password-file $VAULT_SECRET "$DOTFILES_DIR/main.yml" "$@"
+    ansible-playbook -K --vault-password-file $VAULT_SECRET "$DOTFILES_DIR/main.yml" "$@"
 else
-    ansible-playbook "$DOTFILES_DIR/main.yml" "$@"
+    ansible-playbook -K "$DOTFILES_DIR/main.yml" "$@"
 fi
 
 popd 2>&1 >/dev/null
