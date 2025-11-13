@@ -4,24 +4,27 @@
     path: "{{ role_path }}/tasks/{{ ansible_distribution }}.yml"
   register: waybar_distribution_config
 
-- name: "Waybar | Run Tasks: {{ ansible_distribution }}"
-  ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
+- name: "Waybar | Run OS-specific tasks and configure"
   when: waybar_distribution_config.stat.exists
+  block:
+
+    - name: "Waybar | Run Tasks: {{ ansible_distribution }}"
+      ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
+
+    - name: "Waybar | Configure folder"
+      ansible.builtin.file:
+        mode: "0755"
+        path: "{{ ansible_user_dir }}/.config/waybar"
+        state: directory
+
+    - name: "Waybar | Create symlink to role files directory"
+      ansible.builtin.file:
+        src: "{{ role_path }}/files"
+        dest: "{{ ansible_user_dir }}/.config/waybar"
+        state: link
+        force: true
 
 - name: "Waybar | Invalid Current OS"
+  when: not waybar_distribution_config.stat.exists
   ansible.builtin.debug:
     msg: "Waybar won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
-  when: not waybar_distribution_config.stat.exists
-
-- name: "Waybar | Config folder"
-  ansible.builtin.file:
-    mode: "0755"
-    path: "{{ ansible_user_dir }}/.config/waybar"
-    state: directory
-
-- name: "Waybar | Create symlink to role files directory"
-  ansible.builtin.file:
-    src: "{{ role_path }}/files"
-    dest: "{{ ansible_user_dir }}/.config/waybar"
-    state: link
-    force: true

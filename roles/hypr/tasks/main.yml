@@ -4,24 +4,28 @@
     path: "{{ role_path }}/tasks/{{ ansible_distribution }}.yml"
   register: hypr_distribution_config
 
-- name: "Hypr | Run {{ ansible_distribution }} Tasks"
-  ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
+- name: "Hypr | Run OS-specific tasks and configure"
   when: hypr_distribution_config.stat.exists
+  block:
+
+    - name: "Hypr | Run Tasks: {{ ansible_distribution }}"
+      ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
+
+    - name: "Hypr | Configure folder"
+      ansible.builtin.file:
+        mode: "0755"
+        path: "{{ ansible_user_dir }}/.config/hypr"
+        state: directory
+
+    - name: "Hypr | Create symlink to role files directory"
+      ansible.builtin.file:
+        src: "{{ role_path }}/files"
+        dest: "{{ ansible_user_dir }}/.config/hypr"
+        state: link
+        force: true
 
 - name: "Hypr | Invalid Current OS"
+  when: not hypr_distribution_config.stat.exists
   ansible.builtin.debug:
     msg: "Hypr won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
-  when: not hypr_distribution_config.stat.exists
 
-- name: "Hypr | Configure folder"
-  ansible.builtin.file:
-    mode: "0755"
-    path: "{{ ansible_user_dir }}/.config/hypr"
-    state: directory
-
-- name: "Hypr | Create symlink to role files directory"
-  ansible.builtin.file:
-    src: "{{ role_path }}/files"
-    dest: "{{ ansible_user_dir }}/.config/hypr"
-    state: link
-    force: true

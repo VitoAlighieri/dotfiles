@@ -142,8 +142,8 @@ function ubuntu_setup() {
     # Checks ansible instalation and proceeds
     if ! [ -x "$(command -v ansible)" ]; then
         _task "Installing Ansible"
-        _cmd "sudo apt-get update && apt-get upgrade -y && apt-get autoremove && apt-get autoclean"
-        _cmd "sudo apt-get -y install ansible"
+        _cmd "sudo apt update -y"
+        _cmd "sudo apt install -y ansible"
     fi
 
 }
