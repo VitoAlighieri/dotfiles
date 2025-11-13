@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: rofi_distribution_config.stat.exists
 
+- name: "Rofi | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Rofi won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not rofi_distribution_config.stat.exists
+
 - name: "Rofi | Configure folder"
   ansible.builtin.file:
     mode: "0755"

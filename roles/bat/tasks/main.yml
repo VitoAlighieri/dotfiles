@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: bat_distribution_config.stat.exists
 
+- name: "BAT | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "BAT won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not bat_distribution_config.stat.exists
+
 - name: "BAT | Configure folder"
   ansible.builtin.file:
     mode: "0755"

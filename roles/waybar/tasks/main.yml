@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: waybar_distribution_config.stat.exists
 
+- name: "Waybar | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Waybar won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not waybar_distribution_config.stat.exists
+
 - name: "Waybar | Config folder"
   ansible.builtin.file:
     mode: "0755"

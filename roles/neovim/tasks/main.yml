@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: neovim_distribution_config.stat.exists
 
+- name: "Neovim | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Neovim won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not neovim_distribution_config.stat.exists
+
 - name: "Neovim | Configure folder"
   ansible.builtin.file:
     mode: "0755"

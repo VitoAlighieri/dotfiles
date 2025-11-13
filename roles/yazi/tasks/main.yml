@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: yazi_distribution_config.stat.exists
 
+- name: "Yazi | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Yazi won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not yazi_distribution_config.stat.exists
+
 - name: "Yazi | Configure folder"
   ansible.builtin.file:
     mode: "0755"

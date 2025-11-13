@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: hypr_distribution_config.stat.exists
 
+- name: "Hypr | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Hypr won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not hypr_distribution_config.stat.exists
+
 - name: "Hypr | Configure folder"
   ansible.builtin.file:
     mode: "0755"

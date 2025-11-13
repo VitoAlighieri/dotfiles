@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: superfile_distribution_config.stat.exists
 
+- name: "Superfile | Invalid Current OS"
+  ansible.builtin.debug:
+    msg: "Superfile won't be installed. Current OS configuration not found ({{ ansible_distribution }})"
+  when: not superfile_distribution_config.stat.exists
+
 - name: "Superfile | Configure folder"
   ansible.builtin.file:
     mode: "0755"

@@ -1,0 +1,79 @@
+---
+- name: "LSD | (Ubuntu) Ensure running on Debian/Ubuntu"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    success_msg: "LSD | Running valid .yml (Debian/Ubuntu detected)"
+    fail_msg: "LSD | Running invalid playbook"
+
+- name: "LSD | Download Latest Version JSON"
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/lsd-rs/lsd/releases/latest
+  register: lsd_latest_version_json
+  changed_when: false
+
+- name: "LSD | Registering LSD Latest Release tag"
+  ansible.builtin.set_fact:
+    lsd_latest_release_tag: "{{ lsd_latest_version_json.json.tag_name | default('') }}"
+
+- name: "LSD | Registering LSD Latest Version"
+  ansible.builtin.set_fact:
+    lsd_latest_version: "{{ lsd_latest_release_tag | regex_replace('^v', '') }}"
+
+- name: "LSD | Getting version information"
+  ansible.builtin.command:
+    cmd: lsd --version
+  register: current_lsd_version_raw
+  changed_when: false
+  failed_when: false
+
+- name: "LSD | Normalize current_lsd_version"
+  ansible.builtin.set_fact:
+    current_lsd_version: >-
+      {{ (current_lsd_version_raw.stdout.split(' ') | last)
+         if (current_lsd_version_raw.stdout is defined and current_lsd_version_raw.stdout|length > 0)
+         else '' }}
+
+- name: "LSD | Show current_lsd_version debug"
+  ansible.builtin.debug:
+    msg: "Current installed LSD: {{ current_lsd_version | default('not installed') }}"
+
+- name: "LSD | Show lsd_latest_release debug"
+  ansible.builtin.debug:
+    msg: "Latest LSD version available: {{ lsd_latest_version | default('unknown') }}"
+
+- name: "LSD | Check if installation is required"
+  ansible.builtin.set_fact:
+    lsd_needs_install: >-
+      {{ current_lsd_version == '' or (lsd_latest_version not in current_lsd_version) }}
+
+- name: "LSD | Show action debug"
+  ansible.builtin.debug:
+    msg: >
+      LSD | Install/Update required:
+      {{ 'yes' if lsd_needs_install | bool else 'no' }}.
+      (Current: {{ current_lsd_version | default('not installed') }},
+      Latest: {{ lsd_latest_version }})
+
+- name: "LSD | Install / Update (Ubuntu)"
+  when: lsd_needs_install | bool
+  block:
+    - name: "LSD | Update apt cache"
+      ansible.builtin.apt:
+        update_cache: yes
+      become: true
+
+    - name: "LSD | Install"
+      ansible.builtin.apt:
+        name: lsd
+        state: latest
+      become: true
+
+    - name: "LSD | Installation finished debug"
+      ansible.builtin.debug:
+        msg: "LSD | Task completed via Apt (Ubuntu)."
+
+- name: "LSD | Already up-to-date debug"
+  when: not lsd_needs_install | bool
+  ansible.builtin.debug:
+    msg: "LSD | Already installed and no update needed."

@@ -124,7 +124,7 @@ function arch_setup() {
 	if ! pacman -Q ttf-iosevka-nerd >/dev/null 2>&1; then
 		_task "Installing Iosevka Nerd Font"
 		_cmd "sudo pacman -S --noconfirm ttf-iosevka-nerd"
-	fi	
+	fi
 
 	if ! pacman -Q ttf-jetbrains-mono-nerd >/dev/null 2>&1; then
 		_task "Installing JetBrains Mono Nerd Font"
@@ -136,21 +136,52 @@ function arch_setup() {
     _cmd "sudo localectl set-locale LANG=en_US.UTF-8"
 }
 
+#Ubuntu setup
+function ubuntu_setup() {
+
+    # Checks ansible instalation and proceeds
+    if ! [ -x "$(command -v ansible)" ]; then
+        _task "Installing Ansible"
+        _cmd "sudo apt-get update && apt-get upgrade -y && apt-get autoremove && apt-get autoclean"
+        _cmd "sudo apt-get -y install ansible"
+    fi
+
+}
+
 # Updates ansible galaxy
 update_ansible_galaxy() {
     local os_requirements=""
     _task "Updating Ansible Galaxy"
-    if [ -f "$DOTFILES_DIR/requirements/arch.yml" ]; then
-        _task "${OVERWRITE}Updating Ansible Galaxy with Arch Linux configuration"
-        os_requirements="$DOTFILES_DIR/requirements/arch.yml"
+
+    if [ -f "$DOTFILES_DIR/requirements/$ID.yml" ]; then
+        _task "${OVERWRITE}Updating Ansible Galaxy with $ID configuration"
+        os_requirements="$DOTFILES_DIR/requirements/$ID.yml"
     fi
-    _cmd "ansible-galaxy install -r $DOTFILES_DIR/requirements/common.yml $os_requirements"
+
+    if [ -n "$os_requirements" ]; then
+        _cmd "ansible-galaxy install -r $DOTFILES_DIR/requirements/common.yml -r $os_requirements"
+    else
+        _cmd "ansible-galaxy install -r $DOTFILES_DIR/requirements/common.yml"
+    fi
 }
 
-# Loading Arch Linux setup
+# Loading OS setup
 source /etc/os-release
-_task "Loading Setup for Arch Linux"
-arch_setup
+case "$ID" in
+  arch)
+    _task "Loading Setup for Arch Linux"
+    arch_setup
+    ;;
+  ubuntu)
+    _task "Loading Setup for Ubuntu"
+    ubuntu_setup
+    ;;
+  *)
+    _task "OS not supported"
+    printf "Unable to install dotfiles. Invalid OS (%s)\n" "$ID"
+    exit 1
+    ;;
+esac
 
 # Checks ssh keys and proceeds
 if ! [[ -f "$SSH_DIR/authorized_keys" ]]; then
