@@ -1,0 +1,79 @@
+---
+- name: "Bat | (Ubuntu) Ensure running on Debian/Ubuntu"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    success_msg: "Bat | Running valid .yml (Debian/Ubuntu detected)"
+    fail_msg: "Bat | Running invalid playbook"
+
+- name: "Bat | Download Latest Version JSON"
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/sharkdp/bat/releases/latest
+  register: bat_latest_version_json
+  changed_when: false
+
+- name: "Bat | Registering Bat Latest Release tag"
+  ansible.builtin.set_fact:
+    bat_latest_release_tag: "{{ bat_latest_version_json.json.tag_name | default('') }}"
+
+- name: "Bat | Registering Bat Latest Version"
+  ansible.builtin.set_fact:
+    bat_latest_version: "{{ bat_latest_release_tag | regex_replace('^v', '') }}"
+
+- name: "Bat | Getting version information"
+  ansible.builtin.command:
+    cmd: bat --version
+  register: current_bat_version_raw
+  changed_when: false
+  failed_when: false
+
+- name: "Bat | Normalize current_bat_version"
+  ansible.builtin.set_fact:
+    current_bat_version: >-
+      {{ (current_bat_version_raw.stdout.split(' ') | last)
+         if (current_bat_version_raw.stdout is defined and current_bat_version_raw.stdout|length > 0)
+         else '' }}
+
+- name: "Bat | Show current_bat_version debug"
+  ansible.builtin.debug:
+    msg: "Current installed Bat: {{ current_bat_version | default('not installed') }}"
+
+- name: "Bat | Show bat_latest_release debug"
+  ansible.builtin.debug:
+    msg: "Latest Bat version available: {{ bat_latest_version | default('unknown') }}"
+
+- name: "Bat | Check if installation is required"
+  ansible.builtin.set_fact:
+    bat_needs_install: >-
+      {{ current_bat_version == '' or (bat_latest_version not in current_bat_version) }}
+
+- name: "Bat | Show action debug"
+  ansible.builtin.debug:
+    msg: >
+      Bat | Install/Update required:
+      {{ 'yes' if bat_needs_install | bool else 'no' }}.
+      (Current: {{ current_bat_version | default('not installed') }},
+      Latest: {{ bat_latest_version }})
+
+- name: "Bat | Install / Update (Ubuntu)"
+  when: bat_needs_install | bool
+  block:
+    - name: "Bat | Update apt cache"
+      ansible.builtin.apt:
+        update_cache: yes
+      become: true
+
+    - name: "Bat | Install"
+      ansible.builtin.apt:
+        name: bat
+        state: latest
+      become: true
+
+    - name: "Bat | Installation finished debug"
+      ansible.builtin.debug:
+        msg: "Bat | Task completed via Apt (Ubuntu)."
+
+- name: "Bat | Already up-to-date debug"
+  when: not bat_needs_install | bool
+  ansible.builtin.debug:
+    msg: "Bat | Already installed and no update needed."
