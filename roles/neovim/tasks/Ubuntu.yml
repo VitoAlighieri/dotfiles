@@ -1,0 +1,79 @@
+---
+- name: "Neovim | (Ubuntu) Ensure running on Debian/Ubuntu"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    success_msg: "Neovim | Running valid .yml (Debian/Ubuntu detected)"
+    fail_msg: "Neovim | Running invalid playbook"
+
+- name: "Neovim | Download Latest Version JSON"
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/neovim/neovim/releases/latest
+  register: neovim_latest_version_json
+  changed_when: false
+
+- name: "Neovim | Registering Neovim Latest Release tag"
+  ansible.builtin.set_fact:
+    neovim_latest_release_tag: "{{ neovim_latest_version_json.json.tag_name | default('') }}"
+
+- name: "Neovim | Registering Neovim Latest Version"
+  ansible.builtin.set_fact:
+    neovim_latest_version: "{{ neovim_latest_release_tag | regex_replace('^v', '') }}"
+
+- name: "Neovim | Getting version information"
+  ansible.builtin.command:
+    cmd: nvim --version
+  register: current_neovim_version_raw
+  changed_when: false
+  failed_when: false
+
+- name: "Neovim | Normalize current_neovim_version"
+  ansible.builtin.set_fact:
+    current_neovim_version: >-
+      {{ (current_neovim_version_raw.stdout.split(' ') | last)
+         if (current_neovim_version_raw.stdout is defined and current_neovim_version_raw.stdout|length > 0)
+         else '' }}
+
+- name: "Neovim | Show current_neovim_version debug"
+  ansible.builtin.debug:
+    msg: "Current installed Neovim: {{ current_neovim_version | default('not installed') }}"
+
+- name: "Neovim | Show neovim_latest_release debug"
+  ansible.builtin.debug:
+    msg: "Latest Neovim version available: {{ neovim_latest_version | default('unknown') }}"
+
+- name: "Neovim | Check if installation is required"
+  ansible.builtin.set_fact:
+    neovim_needs_install: >-
+      {{ current_neovim_version == '' or (neovim_latest_version not in current_neovim_version) }}
+
+- name: "Neovim | Show action debug"
+  ansible.builtin.debug:
+    msg: >
+      Neovim | Install/Update required:
+      {{ 'yes' if neovim_needs_install | bool else 'no' }}.
+      (Current: {{ current_neovim_version | default('not installed') }},
+      Latest: {{ neovim_latest_version }})
+
+- name: "Neovim | Install / Update (Ubuntu)"
+  when: neovim_needs_install | bool
+  block:
+    - name: "Neovim | Update apt cache"
+      ansible.builtin.apt:
+        update_cache: yes
+      become: true
+
+    - name: "Neovim | Install"
+      ansible.builtin.apt:
+        name: nvim
+        state: latest
+      become: true
+
+    - name: "Neovim | Installation finished debug"
+      ansible.builtin.debug:
+        msg: "Neovim | Task completed via Apt (Ubuntu)."
+
+- name: "Neovim | Already up-to-date debug"
+  when: not neovim_needs_install | bool
+  ansible.builtin.debug:
+    msg: "Neovim | Already installed and no update needed."
