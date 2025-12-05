@@ -1,0 +1,24 @@
+#============GLOBAL============#
+
+# docs and scripts
+README.md
+*.sh
+*.ps1
+
+# generated
+.vscode
+
+#=========WINDOWS & MAC=========#
+{{ if (or (eq .chezmoi.os "windows") (eq .chezmoi.os "darwin")) }}
+{{ end }}
+
+#============WINDOWS============#
+{{ if eq .chezmoi.os "windows" }}
+{{ end }}
+
+#=============LINUX============#
+{{ if eq .chezmoi.os "linux" }}
+AppData
+.gitconfig
+.config/powershell
+{{ end }}
