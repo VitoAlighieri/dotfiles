@@ -254,6 +254,8 @@ version_format = '${raw}'
 
 [zig]
 symbol = ""
+style = "fg:teal"
+format = '( [$symbol( $version)]($style) )'
 
 [package]
 disabled = false
