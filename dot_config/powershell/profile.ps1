@@ -5,6 +5,7 @@ Invoke-Expression (&starship init powershell)
 
 # Load PSReadLine (autocomplete, syntax highlight)
 Import-Module PSReadLine -ErrorAction SilentlyContinue
+$lsd = Get-Command lsd -ErrorAction SilentlyContinue
 
 # PSReadLine Tab Completion
 Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
@@ -30,10 +31,6 @@ Set-PSReadLineOption -Colors @{
 Set-PSReadLineOption -ShowToolTips
 
 #==================FUNCTIONS & ALIASES==============================#
-function lsa {
-    param ($file, $n = 10)
-    Get-Content $file -Head $n
-}
 function touch {
     param ($file)
     New-Item -ItemType File -Path $file -Force | Out-Null
@@ -48,6 +45,32 @@ function tail {
 }
 function ssrm {
     Remove-Item -Recurse "$HOME\Pictures\Screenshots\*"
+}
+
+if ($lsd) {
+    # Quitar alias ls de PowerShell si existe (ls -> Get-ChildItem)
+    if (Test-Path Alias:ls) {
+        Remove-Item Alias:ls -Force
+    }
+
+    # ls: pasa todos los argumentos directamente a lsd
+    function ls {
+        lsd @args
+    }
+
+    # ll: listado largo
+    function ll {
+        lsd -l @args
+    }
+
+    # la: todo + ocultos
+    function la {
+        lsd -la @args
+    }
+
+    # Alias adicionales comodín
+    Set-Alias l ls
+    Set-Alias lla la
 }
 
 Set-Alias -Name cat -Value bat
