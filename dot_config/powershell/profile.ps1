@@ -3,6 +3,9 @@
 # Init Starship Prompt
 Invoke-Expression (&starship init powershell)
 
+# Define Global Custom Paths
+$Env:LESSHISTFILE= "-" # This disable the _lesshst file generation
+
 # Load PSReadLine (autocomplete, syntax highlight)
 Import-Module PSReadLine -ErrorAction SilentlyContinue
 $lsd = Get-Command lsd -ErrorAction SilentlyContinue
