@@ -1,5 +1,4 @@
 local explorer = require("config.plugins.snacks.explorer")
-local notifier = require("config.plugins.snacks.notifier")
 local picker = require("config.plugins.snacks.picker")
 
 return {
@@ -13,7 +12,7 @@ return {
             explorer = explorer,
             indent = { enabled = false },
             input = { enabled = false },
-            notifier = notifier,
+            notifier = { enabled = false },
             picker = picker,
             quickfile = { enabled = false },
             scope = { enabled = false },
@@ -28,7 +27,7 @@ return {
             { "<leader>,",       function() Snacks.picker.buffers() end,         desc = "Buffers" },
             { "<leader>/",       function() Snacks.picker.grep() end,            desc = "Grep" },
             { "<leader>:",       function() Snacks.picker.command_history() end, desc = "Command History" },
-            { "<leader>n",       function() Snacks.picker.notifications() end,   desc = "Notification History" },
+            { "<leader>n",       function() vim.cmd("Noice history") end,        desc = "Noice History" },
             { "<leader>e",       function() Snacks.explorer() end,               desc = "File Explorer" },
         },
     },

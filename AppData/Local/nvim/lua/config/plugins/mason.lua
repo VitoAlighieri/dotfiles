@@ -139,7 +139,11 @@ return {
                                     runtime = { version = "Lua 5.4" },
                                     diagnostics = {
                                         globals = { "bit", "vim", "it", "describe", "before_each", "after_each" },
-                                    }
+                                    },
+                                    workspace = {
+                                        checkThirdParty = false,
+                                    },
+                                    telemetry = { enable = false }
                                 }
                             }
                         })

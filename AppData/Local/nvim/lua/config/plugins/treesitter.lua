@@ -11,12 +11,31 @@ return {
                 modules = {},
                 highlight = {
                     enable = true,
-                    disable = function(lang, buf)
-                        local max_filesize = 100 * 1024 -- 100 KB
-                        local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
-                        if ok and stats and stats.size > max_filesize then
+                    disable = function(_, bufnr)
+                        -- Normaliza bufnr: puede venir como number, o como tabla de varias formas
+                        if type(bufnr) ~= "number" then
+                            if type(bufnr) == "table" then
+                                bufnr = bufnr.buf or bufnr.bufnr or bufnr[1]
+                            end
+                            if type(bufnr) ~= "number" then
+                                bufnr = vim.api.nvim_get_current_buf()
+                            end
+                        end
+
+                        -- Evita buffers especiales (help, prompt, nofile, etc.)
+                        if vim.bo[bufnr].buftype ~= "" then
                             return true
                         end
+
+                        local name = vim.api.nvim_buf_get_name(bufnr)
+                        if name == "" then
+                            return false
+                        end
+
+                        local max_filesize = 200 * 1024 -- 200KB
+                        local uv = vim.uv or vim.loop
+                        local ok, stats = pcall(uv.fs_stat, name)
+                        return ok and stats and stats.size > max_filesize
                     end,
                     additional_vim_regex_highlighting = false,
                 },
