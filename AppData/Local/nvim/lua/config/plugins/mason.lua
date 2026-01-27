@@ -43,9 +43,13 @@ return {
                 automatic_installation = true,
                 ensure_installed = {
                     "bashls",
-                    "omnisharp",
+                    "cssls",
+                    "eslint",
                     "lua_ls",
+                    "omnisharp",
                     "pyright",
+                    "tailwindcss",
+                    "ts_ls",
                     "zls"
                 },
 
