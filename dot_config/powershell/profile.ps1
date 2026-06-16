@@ -77,6 +77,7 @@ if ($lsd) {
 }
 
 Set-Alias -Name cat -Value bat
+Set-Alias -Name htop -Value neohtop-cli
 Set-Alias which Get-Command
 
 #===================================================================#
