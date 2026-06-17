@@ -1,25 +1,15 @@
-#============GLOBAL============#
+#============ GLOBAL ============#
 
-# docs and scripts
+# Documentacion y metadatos del repo: no se despliegan al $HOME.
 README.md
-*.sh
-*.ps1
 LICENSE
-
-# generated
 .vscode
 
-#=========WINDOWS & MAC=========#
-{{ if (or (eq .chezmoi.os "windows") (eq .chezmoi.os "darwin")) }}
-{{ end }}
+# Nota: .chezmoidata/ y .chezmoiscripts/ los excluye chezmoi
+# automaticamente (no hace falta listarlos aqui).
 
-#============WINDOWS============#
-{{ if eq .chezmoi.os "windows" }}
-{{ end }}
-
-#=============LINUX============#
+#============ LINUX ============#
 {{ if eq .chezmoi.os "linux" }}
 AppData
-.gitconfig
 .config/powershell
 {{ end }}

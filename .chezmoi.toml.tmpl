@@ -1,10 +1,7 @@
 [add]
     secrets = "ignore"
 
-{{if eq .chezmoi.os "windows"}}
-[hooks.apply.post]
-    # command = ".scripts/ps/copy-profile.ps1"
-    command = "pwsh"
-    args = ["-File",".scripts/ps/copy-profile.ps1"]
-{{end}}
-
+# El profile de PowerShell se despliega ahora con el script
+# .chezmoiscripts/run_onchange_after_20-deploy-pwsh-profile.ps1.tmpl
+# y los programas con
+# .chezmoiscripts/run_onchange_before_10-install-packages.ps1.tmpl

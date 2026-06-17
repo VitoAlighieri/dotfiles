@@ -1,7 +1,9 @@
 # POWERSHELL PROFILE
 
-# Init Starship Prompt
-Invoke-Expression (&starship init powershell)
+# Init Starship Prompt (solo si esta instalado)
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (&starship init powershell)
+}
 
 # Define Global Custom Paths
 $Env:LESSHISTFILE= "-" # This disable the _lesshst file generation
@@ -76,8 +78,14 @@ if ($lsd) {
     Set-Alias lla la
 }
 
-Set-Alias -Name cat -Value bat
-Set-Alias -Name htop -Value neohtop-cli
+# Aliases que dependen de herramientas externas: solo se definen si la
+# herramienta esta instalada, para no romper el comando nativo si falta.
+if (Get-Command bat -ErrorAction SilentlyContinue) {
+    Set-Alias -Name cat -Value bat
+}
+if (Get-Command neohtop-cli -ErrorAction SilentlyContinue) {
+    Set-Alias -Name htop -Value neohtop-cli
+}
 Set-Alias which Get-Command
 
 #===================================================================#

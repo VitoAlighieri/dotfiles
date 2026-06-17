@@ -1,0 +1,38 @@
+{{- if eq .chezmoi.os "windows" -}}
+# =====================================================================
+# Despliegue del profile de PowerShell 7 (gestionado por chezmoi)
+# ---------------------------------------------------------------------
+# chezmoi aplica el profile en  ~/.config/powershell/profile.ps1, pero
+# PowerShell lo carga desde Documents\PowerShell\. Este script copia el
+# profile a la ruta real de $PROFILE de PowerShell 7.
+#
+# Ventajas frente al copiado anterior:
+#   - Usa GetFolderPath('MyDocuments'): respeta la redireccion de OneDrive
+#   - No depende de que 'pwsh' este en el PATH durante el apply
+#   - Solo se reejecuta cuando cambia el profile (hash de abajo)
+#
+# hash del profile (no tocar): {{ include "dot_config/powershell/profile.ps1" | sha256sum }}
+# =====================================================================
+
+$ErrorActionPreference = 'Stop'
+
+$source = Join-Path $HOME '.config\powershell\profile.ps1'
+if (-not (Test-Path $source)) {
+    Write-Warning "No se encontro el profile fuente en $source"
+    exit 0
+}
+
+# Carpeta Documentos real (compatible con la redireccion de OneDrive)
+$documents = [Environment]::GetFolderPath('MyDocuments')
+$target    = Join-Path $documents 'PowerShell\Microsoft.PowerShell_profile.ps1'
+$targetDir = Split-Path $target -Parent
+
+if (-not (Test-Path $targetDir)) {
+    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+}
+
+Copy-Item -Path $source -Destination $target -Force
+Write-Host "[profile] PowerShell 7 profile desplegado en: $target" -ForegroundColor Green
+
+exit 0
+{{- end }}
