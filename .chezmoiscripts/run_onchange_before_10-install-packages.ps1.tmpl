@@ -1,0 +1,126 @@
+{{- if eq .chezmoi.os "windows" -}}
+# =====================================================================
+# Preinstalacion de programas con winget (gestionado por chezmoi)
+# ---------------------------------------------------------------------
+# La lista de paquetes vive en  .chezmoidata/packages.yaml
+# Este script se regenera/reejecuta cuando esa lista cambia y, ademas,
+# una vez al dia (el token de fecha de abajo cambia el hash del script).
+#
+# token diario (no tocar): {{ now | date "2006-01-02" }}
+# =====================================================================
+
+$ErrorActionPreference = 'Continue'
+
+# --- Paquetes winget (inyectados desde packages.yaml) ----------------
+$packages = @(
+{{- range .packages.windows.winget }}
+    '{{ .id }}'
+{{- end }}
+)
+
+# --- Nerd Fonts (inyectadas desde packages.yaml) ---------------------
+$nerdFonts = @(
+{{- range .packages.windows.nerdfonts }}
+    '{{ . }}'
+{{- end }}
+)
+
+Write-Host "==> Asegurando programas con winget..." -ForegroundColor Cyan
+
+# winget tiene que estar disponible (App Installer). Si no esta, avisamos
+# y salimos sin romper el resto del `chezmoi apply`.
+if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Write-Warning "winget no esta disponible. Instala 'App Installer' desde Microsoft Store y vuelve a ejecutar 'chezmoi apply'."
+    exit 0
+}
+
+function Test-WingetInstalled {
+    param([string]$Id)
+    winget list --id $Id --exact --accept-source-agreements *> $null
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Install-WingetPackage {
+    param([string]$Id)
+    if (Test-WingetInstalled -Id $Id) {
+        Write-Host ("  [=] {0} ya instalado -> comprobando actualizacion" -f $Id) -ForegroundColor DarkGray
+        winget upgrade --id $Id --exact --silent `
+            --accept-package-agreements --accept-source-agreements *> $null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host ("  [^] {0} actualizado" -f $Id) -ForegroundColor Green
+        } else {
+            # No hay actualizacion aplicable (o no se pudo): no es un error.
+            Write-Host ("  [=] {0} ya estaba en la ultima version" -f $Id) -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host ("  [+] Instalando {0} ..." -f $Id) -ForegroundColor Yellow
+        winget install --id $Id --exact --silent --source winget `
+            --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host ("  [OK] {0} instalado" -f $Id) -ForegroundColor Green
+        } else {
+            Write-Warning ("  No se pudo instalar {0} (revisa el Id en packages.yaml)" -f $Id)
+        }
+    }
+}
+
+function Install-NerdFont {
+    param([string]$Name)
+
+    $userFonts = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+    $sysFonts  = Join-Path $env:WINDIR 'Fonts'
+    $already = @()
+    foreach ($dir in @($userFonts, $sysFonts)) {
+        if (Test-Path $dir) {
+            $already += Get-ChildItem -Path $dir -Filter "*$Name*Nerd*" -ErrorAction SilentlyContinue
+        }
+    }
+    if ($already.Count -gt 0) {
+        Write-Host ("  [=] Nerd Font '{0}' ya instalada" -f $Name) -ForegroundColor DarkGray
+        return
+    }
+
+    Write-Host ("  [+] Instalando Nerd Font '{0}' ..." -f $Name) -ForegroundColor Yellow
+    $tmpDir = Join-Path $env:TEMP ("nerdfont_" + $Name)
+    $zip    = "$tmpDir.zip"
+    $url    = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$Name.zip"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+        if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+        Expand-Archive -Path $zip -DestinationPath $tmpDir -Force
+
+        if (-not (Test-Path $userFonts)) { New-Item -ItemType Directory -Path $userFonts -Force | Out-Null }
+        $regKey = 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
+
+        $fontFiles = Get-ChildItem -Path $tmpDir -Recurse -Include '*.ttf', '*.otf' -ErrorAction SilentlyContinue
+        foreach ($f in $fontFiles) {
+            $dest = Join-Path $userFonts $f.Name
+            Copy-Item -Path $f.FullName -Destination $dest -Force
+            New-ItemProperty -Path $regKey -Name $f.BaseName -Value $dest -PropertyType String -Force | Out-Null
+        }
+        Write-Host ("  [OK] Nerd Font '{0}' instalada (reinicia la terminal para verla)" -f $Name) -ForegroundColor Green
+    } catch {
+        Write-Warning ("  No se pudo instalar la fuente '{0}': {1}" -f $Name, $_.Exception.Message)
+    } finally {
+        Remove-Item $zip -ErrorAction SilentlyContinue
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+foreach ($id in $packages) {
+    if ([string]::IsNullOrWhiteSpace($id)) { continue }
+    Install-WingetPackage -Id $id
+}
+
+foreach ($font in $nerdFonts) {
+    if ([string]::IsNullOrWhiteSpace($font)) { continue }
+    Install-NerdFont -Name $font
+}
+
+Write-Host "==> Programas asegurados." -ForegroundColor Cyan
+
+# Salimos siempre con 0 para no abortar el resto del `chezmoi apply`
+# (un fallo puntual de un paquete ya se avisa arriba).
+exit 0
+{{- end }}

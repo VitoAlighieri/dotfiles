@@ -1,0 +1,48 @@
+# =====================================================================
+# Paquetes gestionados por chezmoi (Windows / winget)
+# ---------------------------------------------------------------------
+# Esta lista la consume el script de preinstalacion:
+#   .chezmoiscripts/run_onchange_before_10-install-packages.ps1.tmpl
+#
+# Que hace ese script en CADA equipo, al ejecutar `chezmoi apply`:
+#   - Si el paquete NO esta instalado            -> winget install
+#   - Si esta instalado y hay version mas nueva  -> winget upgrade
+#   (se vuelve a ejecutar cuando editas este archivo y, ademas,
+#    una vez al dia para comprobar actualizaciones)
+#
+# Para anadir un programa: descomenta o copia una linea con su Id de
+# winget exacto. Busca el Id con:  winget search <nombre>
+# =====================================================================
+packages:
+  windows:
+    # --- Programas a asegurar via winget (id = Id EXACTO de winget) ---
+    winget:
+      - id: Neovim.Neovim          # Editor        (config en AppData/Local/nvim)
+      - id: Starship.Starship      # Prompt        (dot_config/starship.toml)
+      - id: lsd-rs.lsd             # ls moderno    (AppData/Roaming/lsd)
+      - id: sharkdp.bat            # cat a color   (AppData/Roaming/bat)
+      - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
+      - id: Microsoft.PowerShell   # PowerShell 7  (la shell del profile)
+
+      # --- Opcionales: descomenta lo que quieras que se instale --------
+      # Dependencias reales de tu Neovim (telescope / Snacks):
+      # - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
+      # - id: sharkdp.fd                # busqueda de archivos (Snacks / telescope)
+      # - id: dandavison.delta          # diffs bonitos (previewer de Snacks)
+      #
+      # Toolchains para los LSP / linter / treesitter de Neovim:
+      # - id: OpenJS.NodeJS.LTS         # ts_ls, eslint, cssls, tailwind, bashls, pyright
+      # - id: Python.Python.3.13        # desarrollo Python
+      # - id: Microsoft.DotNet.SDK.9    # omnisharp (C#)
+      # - id: zig.zig                   # zls + compilador C para treesitter
+      # - id: LLVM.LLVM                 # clang (compilador C alternativo treesitter/ccls)
+      #
+      # Monitor de sistema (alias `htop` del profile):
+      # - id: Abdenasser.NeoHtop        # ajusta el Id si tu `neohtop-cli` es otro
+
+    # --- Nerd Fonts a instalar (desde el release oficial nerd-fonts) --
+    # Necesarias para que los iconos de starship/lsd/neovim se vean bien.
+    # El nombre debe coincidir con el .zip del release (p.ej. JetBrainsMono,
+    # FiraCode, CascadiaCode, Hack...). https://github.com/ryanoasis/nerd-fonts
+    nerdfonts:
+      - JetBrainsMono
