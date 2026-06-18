@@ -86,6 +86,12 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
 if (Get-Command neohtop-cli -ErrorAction SilentlyContinue) {
     Set-Alias -Name htop -Value neohtop-cli
 }
+if (Get-Command fd -ErrorAction SilentlyContinue) {
+    Set-Alias -Name find -Value fd
+}
+if (Get-Command rg -ErrorAction SilentlyContinue) {
+    Set-Alias -Name grep -Value rg
+}
 Set-Alias which Get-Command
 
 #===================================================================#
