@@ -21,13 +21,13 @@ packages:
       - id: Starship.Starship      # Prompt        (dot_config/starship.toml)
       - id: lsd-rs.lsd             # ls moderno    (AppData/Roaming/lsd)
       - id: sharkdp.bat            # cat a color   (AppData/Roaming/bat)
+      - id: sharkdp.fd             # busqueda de archivos   (AppData/Roaming/fd)
+      - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
       - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
       - id: Microsoft.PowerShell   # PowerShell 7  (la shell del profile)
 
       # --- Opcionales: descomenta lo que quieras que se instale --------
       # Dependencias reales de tu Neovim (telescope / Snacks):
-      # - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
-      # - id: sharkdp.fd                # busqueda de archivos (Snacks / telescope)
       # - id: dandavison.delta          # diffs bonitos (previewer de Snacks)
       #
       # Toolchains para los LSP / linter / treesitter de Neovim:
