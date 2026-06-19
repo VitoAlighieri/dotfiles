@@ -92,6 +92,10 @@ if (Get-Command fd -ErrorAction SilentlyContinue) {
 if (Get-Command rg -ErrorAction SilentlyContinue) {
     Set-Alias -Name grep -Value rg
 }
+if (Get-Command tldr -ErrorAction SilentlyContinue) {
+    Set-Alias -Name man -Value tldr
+}
+
 Set-Alias which Get-Command
 
 #===================================================================#

@@ -22,6 +22,7 @@ packages:
       - id: lsd-rs.lsd             # ls moderno    (AppData/Roaming/lsd)
       - id: sharkdp.bat            # cat a color   (AppData/Roaming/bat)
       - id: sharkdp.fd             # busqueda de archivos   (AppData/Roaming/fd)
+      - id: tldr-pages.tlrc             # collaborative cheatsheets for console commands
       - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
       - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
       - id: Microsoft.PowerShell   # PowerShell 7  (la shell del profile)
