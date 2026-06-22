@@ -1,0 +1,18 @@
+{{- if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+# =====================================================================
+# Registra el tema Catppuccin de bat (Linux/macOS)
+# ---------------------------------------------------------------------
+# bat necesita `bat cache --build` para reconocer temas custom. Esto lo
+# hace automaticamente, asi el tema se aplica tambien en maquinas nuevas.
+# Se reejecuta cuando cambia el tema (hash abajo).
+#
+# theme hash: {{ include "dot_config/bat/themes/Catppuccin Macchiato.tmTheme" | sha256sum }}
+# =====================================================================
+export BAT_CONFIG_DIR="$HOME/.config/bat"
+if command -v bat >/dev/null 2>&1; then
+    bat cache --build >/dev/null 2>&1 || true
+elif command -v batcat >/dev/null 2>&1; then
+    batcat cache --build >/dev/null 2>&1 || true
+fi
+{{- end }}

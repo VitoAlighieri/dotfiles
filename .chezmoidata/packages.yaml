@@ -24,6 +24,9 @@ packages:
       - id: sharkdp.fd             # busqueda de archivos   (usa ~/.config, comun)
       - id: tldr-pages.tlrc             # collaborative cheatsheets for console commands
       - id: BurntSushi.ripgrep.MSVC   # grep rapido (dot_config/ripgrep, comun)
+      - id: Microsoft.Coreutils    # 75+ comandos Unix nativos (wc, cut, head, sha256sum...)
+                                   #   Tus alias (ls->lsd, cat->bat, grep->rg, find->fd)
+                                   #   tienen prioridad y se respetan.
       - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
       - id: Microsoft.PowerShell   # PowerShell 7  (solo Windows; dot_config/powershell)
       - id: Flow-Launcher.Flow-Launcher  # Lanzador  (solo Windows; AppData/Roaming/FlowLauncher)

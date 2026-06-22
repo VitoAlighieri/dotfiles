@@ -1,0 +1,17 @@
+{{- if eq .chezmoi.os "windows" -}}
+# =====================================================================
+# Registra el tema Catppuccin de bat (Windows)
+# ---------------------------------------------------------------------
+# bat necesita `bat cache --build` para reconocer temas custom. Esto lo
+# hace automaticamente, asi el tema se aplica tambien en maquinas nuevas.
+# Se reejecuta cuando cambia el tema (hash abajo).
+#
+# theme hash: {{ include "dot_config/bat/themes/Catppuccin Macchiato.tmTheme" | sha256sum }}
+# =====================================================================
+if (Get-Command bat -ErrorAction SilentlyContinue) {
+    $env:BAT_CONFIG_DIR = Join-Path $HOME '.config\bat'
+    bat cache --build *> $null
+    Write-Host "[bat] cache reconstruida (tema Catppuccin registrado)" -ForegroundColor Green
+}
+exit 0
+{{- end }}
