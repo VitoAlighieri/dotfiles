@@ -1,0 +1,35 @@
+{{- if eq .chezmoi.os "windows" -}}
+# =====================================================================
+# Variables de entorno de usuario (Windows) para configs compartidas
+# ---------------------------------------------------------------------
+# Las configs viven en ~/.config (las mismas que en Linux). En Windows
+# hay que decirle a cada herramienta que lea de ahi. Esto las fija de
+# forma PERSISTENTE (a nivel de usuario), para que tambien funcionen
+# fuera de PowerShell (VS Code, lanzadores, GUI...).
+#
+# Tras la primera vez, reinicia la terminal/apps para que las vean.
+# =====================================================================
+
+$ErrorActionPreference = 'Stop'
+
+function Set-UserEnvVar {
+    param([string]$Name, [string]$Value)
+    $current = [Environment]::GetEnvironmentVariable($Name, 'User')
+    if ($current -ne $Value) {
+        [Environment]::SetEnvironmentVariable($Name, $Value, 'User')
+        Write-Host ("[env] {0} = {1}  (fijada; reinicia la terminal)" -f $Name, $Value) -ForegroundColor Green
+    } else {
+        Write-Host ("[env] {0} ya estaba configurada" -f $Name) -ForegroundColor DarkGray
+    }
+    # Disponible tambien en la sesion actual
+    Set-Item -Path ("Env:{0}" -f $Name) -Value $Value
+}
+
+$xdg = Join-Path $HOME '.config'
+
+Set-UserEnvVar 'XDG_CONFIG_HOME'     $xdg                              # nvim, fd, ...
+Set-UserEnvVar 'BAT_CONFIG_DIR'      (Join-Path $xdg 'bat')           # bat
+Set-UserEnvVar 'RIPGREP_CONFIG_PATH' (Join-Path $xdg 'ripgrep\config') # ripgrep
+
+exit 0
+{{- end }}
