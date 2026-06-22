@@ -1,5 +1,6 @@
 {
   "Hotkey": "Alt + Space",
+  "Theme": "Catppuccin Macchiato",
   "ShowOpenResultHotkey": true,
   "MaxResultsToShow": 5,
   "ItemHeightSize": 58,

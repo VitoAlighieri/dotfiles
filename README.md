@@ -92,17 +92,31 @@ La lista de programas está en **`.chezmoidata/packages.yaml`**. En cada
 si hay **versión más nueva** → `winget upgrade`. El script se reejecuta al
 editar la lista y, además, una vez al día.
 
-Por defecto asegura **Neovim, Starship, lsd, bat, fd, ripgrep, tldr, Git,
-PowerShell 7, Flow Launcher** y la **Nerd Font JetBrainsMono**. Hay extras
-comentados (delta, toolchains de LSP…) listos para activar.
+Por defecto asegura **Neovim, Starship, lsd, bat, fd, ripgrep, tldr, coreutils
+(comandos Unix nativos), Git, PowerShell 7, Flow Launcher** y la **Nerd Font
+JetBrainsMono**. Hay extras comentados (delta, toolchains de LSP…) listos para
+activar.
 
 Para añadir un programa, añade su Id de winget (búscalo con
 `winget search <nombre>`) y ejecuta `chezmoi apply`.
 
+## Tema (Catppuccin Macchiato)
+
+El mismo tema en todo, en todas las máquinas:
+
+- **starship, lsd, nvim**: el tema va dentro de su config (compartida), se
+  aplica solo.
+- **bat**: el tema custom se registra automáticamente con `bat cache --build`
+  (script `run_onchange_after_40-bat-cache`), también en máquinas nuevas.
+- **Flow Launcher**: el tema `Catppuccin Macchiato.xaml` se despliega en
+  `%APPDATA%\FlowLauncher\Themes\` y queda activado en su `Settings.json`.
+
 ## Notas
 
-- **bat**: si cambias el tema, ejecuta `bat cache --build` en cada máquina para
-  que registre los temas de `~/.config/bat/themes`.
+- **Coreutils**: añade ~75 comandos Unix (`wc`, `cut`, `head`, `sha256sum`…).
+  Tus alias (`ls`→lsd, `cat`→bat, `grep`→rg, `find`→fd) y los de PowerShell
+  (`cp`, `mv`, `rm`, `pwd`…) tienen prioridad; para forzar la versión coreutils
+  llámala con `.exe` (p. ej. `cp.exe`). Requiere PowerShell 7.4+.
 - **Nerd Font**: recuerda seleccionarla en los ajustes de tu terminal.
 
 ## Estructura
