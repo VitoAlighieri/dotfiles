@@ -26,6 +26,7 @@ packages:
       - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
       - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
       - id: Microsoft.PowerShell   # PowerShell 7  (la shell del profile)
+      - id: Flow-Launcher.Flow-Launcher  # Lanzador  (config en AppData/Roaming/FlowLauncher)
 
       # --- Opcionales: descomenta lo que quieras que se instale --------
       # Dependencias reales de tu Neovim (telescope / Snacks):
