@@ -1,0 +1,11 @@
+{
+  "Hotkey": "Alt + Space",
+  "ShowOpenResultHotkey": true,
+  "MaxResultsToShow": 5,
+  "ItemHeightSize": 58,
+  "WindowSize": 580,
+  "UseGlyphIcons": true,
+  "ShouldUsePinyin": false,
+  "ShowHistoryResultsForHomePage": false,
+  "AutoUpdates": false
+}

@@ -1,0 +1,8 @@
+{{- if eq .chezmoi.os "windows" -}}
+# Las configs ahora viven en ~/.config (compartidas con Linux). En Windows,
+# lsd da PRIORIDAD a %APPDATA%\lsd sobre ~/.config\lsd, asi que eliminamos la
+# copia antigua para que use la compartida.
+# (bat y nvim no hace falta quitarlos: sus variables de entorno ya los
+#  redirigen, y la copia vieja sirve de respaldo si la variable no esta activa.)
+AppData/Roaming/lsd
+{{- end }}

@@ -1,0 +1,12 @@
+# ripgrep config (compartida en ~/.config/ripgrep/config para todos los SO)
+# ---------------------------------------------------------------------------
+# ripgrep lee este archivo via la variable RIPGREP_CONFIG_PATH.
+#   - Windows: la fija el profile / el script de chezmoi automaticamente.
+#   - Linux:   anade a tu shell  ->  export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
+#
+# Pon una opcion por linea (sin comillas). Ejemplos (descomenta lo que quieras):
+# --smart-case
+# --hidden
+# --glob=!.git/*
+# --max-columns=200
+# --max-columns-preview

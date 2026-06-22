@@ -17,15 +17,16 @@ packages:
   windows:
     # --- Programas a asegurar via winget (id = Id EXACTO de winget) ---
     winget:
-      - id: Neovim.Neovim          # Editor        (config en AppData/Local/nvim)
-      - id: Starship.Starship      # Prompt        (dot_config/starship.toml)
-      - id: lsd-rs.lsd             # ls moderno    (AppData/Roaming/lsd)
-      - id: sharkdp.bat            # cat a color   (AppData/Roaming/bat)
-      - id: sharkdp.fd             # busqueda de archivos   (AppData/Roaming/fd)
+      - id: Neovim.Neovim          # Editor        (config en dot_config/nvim, comun)
+      - id: Starship.Starship      # Prompt        (dot_config/starship.toml, comun)
+      - id: lsd-rs.lsd             # ls moderno    (dot_config/lsd, comun)
+      - id: sharkdp.bat            # cat a color   (dot_config/bat, comun)
+      - id: sharkdp.fd             # busqueda de archivos   (usa ~/.config, comun)
       - id: tldr-pages.tlrc             # collaborative cheatsheets for console commands
-      - id: BurntSushi.ripgrep.MSVC   # grep rapido (live grep / Snacks grep)
+      - id: BurntSushi.ripgrep.MSVC   # grep rapido (dot_config/ripgrep, comun)
       - id: Git.Git                # git           (lo necesita lazy.nvim y el prompt)
-      - id: Microsoft.PowerShell   # PowerShell 7  (la shell del profile)
+      - id: Microsoft.PowerShell   # PowerShell 7  (solo Windows; dot_config/powershell)
+      - id: Flow-Launcher.Flow-Launcher  # Lanzador  (solo Windows; AppData/Roaming/FlowLauncher)
 
       # --- Opcionales: descomenta lo que quieras que se instale --------
       # Dependencias reales de tu Neovim (telescope / Snacks):

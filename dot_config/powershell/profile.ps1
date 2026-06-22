@@ -1,5 +1,14 @@
 # POWERSHELL PROFILE
 
+# Configs compartidas en ~/.config (iguales en Windows y Linux).
+# En Windows redirigimos aqui las herramientas con estas variables, para que
+# lean la MISMA config que en Linux. (Tambien se fijan de forma persistente
+# en el script .chezmoiscripts/run_onchange_after_30-windows-env.ps1.tmpl.)
+$XdgConfig = Join-Path $HOME '.config'
+$env:XDG_CONFIG_HOME     = $XdgConfig                       # nvim, fd, ...
+$env:BAT_CONFIG_DIR      = Join-Path $XdgConfig 'bat'       # bat
+$env:RIPGREP_CONFIG_PATH = Join-Path $XdgConfig 'ripgrep\config'  # ripgrep
+
 # Init Starship Prompt (solo si esta instalado)
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
