@@ -1,16 +1,20 @@
 {{- if ne .chezmoi.os "windows" -}}
 #!/bin/sh
 # =====================================================================
-# Extensiones de VS Code (Linux/macOS)
+# Extensiones de VS Code (Linux)
 # ---------------------------------------------------------------------
 # En Linux VS Code no lo instalan estos dotfiles; si lo tienes, aqui se
 # instalan las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
 # que falten, p. ej. el tema Catppuccin que activa settings.json.
-# Se reejecuta cuando cambia la lista y cuando `code` pasa a estar en el
-# PATH (linea de abajo).
+# Se reejecuta cuando cambia la lista, cuando `code` pasa a estar en el
+# PATH y mientras falte alguna por instalar (lineas de abajo).
 #
 # code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
+# pendientes al generarlo: {{ if lookPath "code" }}{{ range .packages.vscode.extensions }}{{ if not (glob (joinPath $.chezmoi.homeDir ".vscode/extensions" (printf "%s-[0-9]*" (lower .)))) }}{{ . }}@{{ now | date "20060102T150405.000000000" }} {{ end }}{{ end }}{{ end }}
 # =====================================================================
+
+# En WSL, `code` es el VS Code de Windows (ya lo gestiona el script .ps1).
+[ -n "${WSL_DISTRO_NAME:-}" ] && exit 0
 command -v code >/dev/null 2>&1 || exit 0
 
 installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
@@ -21,7 +25,8 @@ for ext in{{ range .packages.vscode.extensions }} {{ . | quote }}{{ end }}; do
         continue
     fi
     echo "[vscode] Instalando $ext ..."
-    code --install-extension "$ext" >/dev/null 2>&1 || echo "[vscode] No se pudo instalar $ext" >&2
+    code --install-extension "$ext" >/dev/null 2>&1 ||
+        echo "[vscode] No se pudo instalar $ext; se reintentara en el proximo 'chezmoi apply' (a mano: code --install-extension $ext)" >&2
 done
 exit 0
-{{- end }}
+{{- end -}}

@@ -12,11 +12,15 @@
 $ErrorActionPreference = 'Continue'
 
 # --- Paquetes winget (inyectados desde packages.yaml) ----------------
+# Upgrade = $false para los que se actualizan solos (p. ej. VS Code).
 $packages = @(
 {{- range .packages.windows.winget }}
-    '{{ .id }}'
+    @{ Id = '{{ .id }}'; Upgrade = ${{ if hasKey . "upgrade" }}{{ .upgrade }}{{ else }}true{{ end }} }
 {{- end }}
 )
+
+# Codigo de winget "No applicable update found" (0x8A15002B): ya esta al dia.
+$WingetNoUpdate = -1978335189
 
 # --- Nerd Fonts (inyectadas desde packages.yaml) ---------------------
 $nerdFonts = @(
@@ -41,16 +45,22 @@ function Test-WingetInstalled {
 }
 
 function Install-WingetPackage {
-    param([string]$Id)
+    param([string]$Id, [bool]$Upgrade = $true)
     if (Test-WingetInstalled -Id $Id) {
+        if (-not $Upgrade) {
+            Write-Host ("  [=] {0} ya instalado (se actualiza solo)" -f $Id) -ForegroundColor DarkGray
+            return
+        }
         Write-Host ("  [=] {0} ya instalado -> comprobando actualizacion" -f $Id) -ForegroundColor DarkGray
         winget upgrade --id $Id --exact --silent `
             --accept-package-agreements --accept-source-agreements *> $null
-        if ($LASTEXITCODE -eq 0) {
+        $rc = $LASTEXITCODE
+        if ($rc -eq 0) {
             Write-Host ("  [^] {0} actualizado" -f $Id) -ForegroundColor Green
-        } else {
-            # No hay actualizacion aplicable (o no se pudo): no es un error.
+        } elseif ($rc -eq $WingetNoUpdate) {
             Write-Host ("  [=] {0} ya estaba en la ultima version" -f $Id) -ForegroundColor DarkGray
+        } else {
+            Write-Warning ("  No se pudo actualizar {0} (winget {1}); se reintentara en el proximo chequeo" -f $Id, $rc)
         }
     } else {
         Write-Host ("  [+] Instalando {0} ..." -f $Id) -ForegroundColor Yellow
@@ -108,9 +118,9 @@ function Install-NerdFont {
     }
 }
 
-foreach ($id in $packages) {
-    if ([string]::IsNullOrWhiteSpace($id)) { continue }
-    Install-WingetPackage -Id $id
+foreach ($pkg in $packages) {
+    if ([string]::IsNullOrWhiteSpace($pkg.Id)) { continue }
+    Install-WingetPackage -Id $pkg.Id -Upgrade $pkg.Upgrade
 }
 
 foreach ($font in $nerdFonts) {

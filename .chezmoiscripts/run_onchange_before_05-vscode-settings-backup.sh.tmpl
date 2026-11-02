@@ -1,0 +1,22 @@
+{{- if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+# =====================================================================
+# VS Code (Linux): copia de seguridad del settings.json que ya tuvieras
+# ---------------------------------------------------------------------
+# La primera vez que chezmoi gestiona ~/.config/Code/User/settings.json
+# lo sobrescribe SIN preguntar si ya habia uno tuyo. Antes de eso, este
+# script guarda tu version en settings.json.pre-dotfiles (una sola vez).
+#
+# settings.json del repo: {{ include "dot_config/Code/User/settings.json" | sha256sum }}
+# =====================================================================
+f="$HOME/.config/Code/User/settings.json"
+src={{ joinPath .chezmoi.sourceDir "dot_config/Code/User/settings.json" | quote }}
+bak="$f.pre-dotfiles"
+
+[ -f "$f" ] || exit 0          # no habia settings.json previo
+[ -e "$bak" ] && exit 0        # la copia ya se hizo antes
+cmp -s "$f" "$src" && exit 0   # ya es igual que el del repo
+
+cp -p "$f" "$bak" && echo "[vscode] Tu settings.json anterior se ha guardado en $bak"
+exit 0
+{{- end -}}

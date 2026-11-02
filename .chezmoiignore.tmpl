@@ -8,6 +8,18 @@ LICENSE
 # Nota: .chezmoidata/ y .chezmoiscripts/ los excluye chezmoi
 # automaticamente (no hace falta listarlos aqui).
 
+#============ VS CODE ============#
+# Solo se gestionan settings.json, keybindings.json y snippets/. El resto de
+# ~/.config/Code es estado de cada maquina (sesiones, caches, historial,
+# tokens de inicio de sesion...) y NUNCA debe acabar en el repo: con estas
+# reglas `chezmoi add` lo rechaza aunque se lo pidas por error.
+.config/Code/*
+!.config/Code/User
+.config/Code/User/*
+!.config/Code/User/settings.json
+!.config/Code/User/keybindings.json
+!.config/Code/User/snippets
+
 #============ LINUX ============#
 {{ if eq .chezmoi.os "linux" }}
 AppData

@@ -12,13 +12,22 @@
 # =====================================================================
 
 # En una maquina nueva winget instala bat en este MISMO apply, pero chezmoi
-# arranco con el PATH antiguo: lo recargamos del registro (+ enlaces de winget).
-$env:Path = (@(
-    [Environment]::GetEnvironmentVariable('Path', 'Machine'),
-    [Environment]::GetEnvironmentVariable('Path', 'User'),
-    (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'),
-    $env:Path
-) | Where-Object { $_ }) -join ';'
+# arranco con el PATH antiguo: lo recargamos del registro (+ enlaces de
+# winget), sin duplicados.
+$seen = @{}
+$parts = foreach ($p in ((@(
+            [Environment]::GetEnvironmentVariable('Path', 'Machine'),
+            [Environment]::GetEnvironmentVariable('Path', 'User'),
+            (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'),
+            $env:Path
+        ) -join ';') -split ';')) {
+    $q = [Environment]::ExpandEnvironmentVariables($p.Trim())
+    if ($q -and -not $seen.ContainsKey($q.ToLowerInvariant())) {
+        $seen[$q.ToLowerInvariant()] = $true
+        $q
+    }
+}
+$env:Path = $parts -join ';'
 
 if (Get-Command bat -ErrorAction SilentlyContinue) {
     $env:BAT_CONFIG_DIR = Join-Path $HOME '.config\bat'

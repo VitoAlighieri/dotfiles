@@ -15,6 +15,8 @@
 #
 # Para anadir un programa: descomenta o copia una linea con su Id de
 # winget exacto. Busca el Id con:  winget search <nombre>
+# Opcional por paquete:  upgrade: false  (no lo actualiza winget, p. ej.
+# porque el programa ya se actualiza solo).
 # =====================================================================
 packages:
   windows:
@@ -34,7 +36,9 @@ packages:
       - id: Microsoft.PowerShell   # PowerShell 7  (solo Windows; dot_config/powershell)
       - id: Flow-Launcher.Flow-Launcher  # Lanzador  (solo Windows; AppData/Roaming/FlowLauncher)
       - id: Microsoft.VisualStudioCode   # VS Code   (se instala solo en Windows;
-                                         #            settings comunes en dot_config/Code)
+        upgrade: false                   #            settings comunes en dot_config/Code).
+                                         #   upgrade: false -> se actualiza solo; el
+                                         #   `winget upgrade` diario fallaria si esta abierto.
 
       # --- Opcionales: descomenta lo que quieras que se instale --------
       # Dependencias reales de tu Neovim (telescope / Snacks):

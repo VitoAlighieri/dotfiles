@@ -4,10 +4,12 @@
 # ---------------------------------------------------------------------
 # Instala las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
 # que falten, p. ej. el tema Catppuccin que activa settings.json.
-# Se reejecuta cuando cambia la lista y cuando `code` pasa a estar en el
-# PATH (linea de abajo), asi tambien funciona en maquinas nuevas.
+# Se reejecuta cuando cambia la lista, cuando `code` pasa a estar en el
+# PATH y mientras falte alguna por instalar (lineas de abajo), asi un fallo
+# puntual (sin red, Marketplace caido...) se reintenta solo.
 #
 # code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
+# pendientes al generarlo: {{ if lookPath "code" }}{{ range .packages.vscode.extensions }}{{ if not (glob (joinPath $.chezmoi.homeDir ".vscode/extensions" (printf "%s-[0-9]*" (lower .)))) }}{{ . }}@{{ now | date "20060102T150405.000000000" }} {{ end }}{{ end }}{{ end }}
 # =====================================================================
 
 $extensions = @(
@@ -17,12 +19,20 @@ $extensions = @(
 )
 
 # winget puede haber instalado VS Code en este MISMO apply, pero chezmoi
-# arranco con el PATH antiguo: lo recargamos del registro.
-$env:Path = (@(
-    [Environment]::GetEnvironmentVariable('Path', 'Machine'),
-    [Environment]::GetEnvironmentVariable('Path', 'User'),
-    $env:Path
-) | Where-Object { $_ }) -join ';'
+# arranco con el PATH antiguo: lo recargamos del registro (sin duplicados).
+$seen = @{}
+$parts = foreach ($p in ((@(
+            [Environment]::GetEnvironmentVariable('Path', 'Machine'),
+            [Environment]::GetEnvironmentVariable('Path', 'User'),
+            $env:Path
+        ) -join ';') -split ';')) {
+    $q = [Environment]::ExpandEnvironmentVariables($p.Trim())
+    if ($q -and -not $seen.ContainsKey($q.ToLowerInvariant())) {
+        $seen[$q.ToLowerInvariant()] = $true
+        $q
+    }
+}
+$env:Path = $parts -join ';'
 
 $code = $null
 $cmd = Get-Command 'code.cmd' -ErrorAction SilentlyContinue
@@ -58,8 +68,8 @@ foreach ($ext in $extensions) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host ("  [OK] {0}" -f $ext) -ForegroundColor Green
     } else {
-        Write-Warning ("  No se pudo instalar {0} (revisa el id en packages.yaml)" -f $ext)
+        Write-Warning ("  No se pudo instalar {0}; se reintentara en el proximo 'chezmoi apply' (a mano: code --install-extension {0})" -f $ext)
     }
 }
 exit 0
-{{- end }}
+{{- end -}}

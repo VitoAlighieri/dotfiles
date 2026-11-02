@@ -1,0 +1,170 @@
+{{- if eq .chezmoi.os "windows" -}}
+{{- if not (stat (joinPath (env "APPDATA") "Code" "User" ".dotfiles-junction")) -}}
+# =====================================================================
+# VS Code: settings compartidos mediante una junction (Windows)
+# ---------------------------------------------------------------------
+# VS Code en Windows usa la carpeta de usuario %APPDATA%\Code\User. Para
+# que lea la MISMA config que en Linux (~/.config/Code/User) se convierte
+# en una junction (enlace de carpeta, no necesita permisos de admin):
+#
+#     %APPDATA%\Code\User  ->  ~/.config/Code/User
+#
+# Asi VS Code usa siempre los settings compartidos, se abra desde donde se
+# abra (menu Inicio, Flow Launcher, cualquier terminal...), sin depender
+# de variables de entorno.
+#
+# Si ya usabas VS Code en este equipo, antes se COPIA tu carpeta de
+# usuario (estado de extensiones, sesiones, historial, atajos, snippets...)
+# y el original se conserva renombrado como copia de seguridad.
+#
+# Este script solo se genera mientras el enlace NO esta hecho, y mientras
+# tanto se reintenta en cada `chezmoi apply` (linea "pendiente").
+# pendiente: {{ now | date "2006-01-02T15:04:05.000000000" }}
+# =====================================================================
+
+$codeRoot = Join-Path $env:APPDATA 'Code'
+$link     = Join-Path $codeRoot 'User'               # lo que lee VS Code
+$target   = Join-Path $HOME '.config\Code\User'      # compartido (chezmoi)
+$sentinel = Join-Path $target '.dotfiles-junction'
+$staging  = "$target.migrating"
+$aside    = "$target.old"
+$log      = Join-Path $env:TEMP 'dotfiles-vscode-migracion.log'
+
+function ConvertTo-NormalPath {
+    param([string]$Path)
+    # Quita prefijos \??\ o \\?\ que a veces trae el destino de una junction.
+    $clean = $Path -replace '^(\\\?\?\\|\\\\\?\\)', ''
+    return [System.IO.Path]::GetFullPath($clean).TrimEnd('\')
+}
+
+function Test-VSCodeRunning {
+    $procs = @(Get-Process -Name 'Code', 'inno_updater' -ErrorAction SilentlyContinue)
+    $procs += @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like 'CodeSetup*' })
+    return ($procs.Count -gt 0)
+}
+
+function New-UserJunction {
+    foreach ($dir in @($codeRoot, $target)) {
+        if (-not (Test-Path -LiteralPath $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force -ErrorAction Stop | Out-Null
+        }
+    }
+    New-Item -ItemType Junction -Path $link -Target $target -ErrorAction Stop | Out-Null
+}
+
+function Set-Sentinel {
+    Set-Content -LiteralPath $sentinel -Encoding ASCII -ErrorAction Stop `
+        -Value 'Enlace creado por los dotfiles: %APPDATA%\Code\User -> ~/.config/Code/User'
+}
+
+try {
+    $item = Get-Item -LiteralPath $link -Force -ErrorAction SilentlyContinue
+
+    # --- 1) Ya es un enlace -------------------------------------------
+    if ($item -and $item.LinkType) {
+        $current = @($item.Target)[0]
+        $ok = ($item.LinkType -eq 'Junction') -and $current -and `
+              ((ConvertTo-NormalPath $current) -ieq (ConvertTo-NormalPath $target))
+        if ($ok) {
+            if (-not (Test-Path -LiteralPath $target)) {
+                New-Item -ItemType Directory -Path $target -Force -ErrorAction Stop | Out-Null
+            }
+            Set-Sentinel
+            Write-Host "[vscode] %APPDATA%\Code\User ya apuntaba a ~/.config/Code/User." -ForegroundColor DarkGray
+        } else {
+            Write-Warning ("[vscode] %APPDATA%\Code\User ya es un enlace ({0} -> {1}). No se toca: revisalo a mano." -f $item.LinkType, $current)
+        }
+        exit 0
+    }
+
+    # --- 2) Carpeta real: VS Code ya se ha usado aqui -> migrar --------
+    if ($item) {
+        if (Test-VSCodeRunning) {
+            Write-Warning "[vscode] VS Code esta abierto (o actualizandose). Cierralo y vuelve a ejecutar 'chezmoi apply' para pasar su configuracion a ~/.config/Code/User. Hasta entonces sigue con la de siempre."
+            exit 0
+        }
+        if ((Test-Path -LiteralPath (Join-Path $link 'sync')) -and ($env:DOTFILES_VSCODE_MIGRATE -ne '1')) {
+            Write-Warning "[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync). Si sigue activa, al pasar a los settings compartidos los subiria a la nube y BORRARIA tus otros ajustes en todas las maquinas sincronizadas."
+            Write-Warning "[vscode] 1) En VS Code: Ctrl+Shift+P > busca 'Sync: Turn Off' y desactivala.  2) Cierra VS Code.  3) Ejecuta:  `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply"
+            exit 0
+        }
+        $profilesDir = Join-Path $link 'profiles'
+        if ((Test-Path -LiteralPath $profilesDir) -and (@(Get-ChildItem -LiteralPath $profilesDir -Directory -ErrorAction SilentlyContinue).Count -gt 0)) {
+            Write-Host "[vscode] Nota: tienes perfiles de VS Code ademas del 'Default'; los settings compartidos solo se aplican al perfil Default." -ForegroundColor Yellow
+        }
+
+        Write-Host ("[vscode] Copiando tu configuracion de VS Code a {0} ..." -f $target) -ForegroundColor Yellow
+        $parent = Split-Path $target -Parent
+        if (-not (Test-Path -LiteralPath $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force -ErrorAction Stop | Out-Null
+        }
+        if (Test-Path -LiteralPath $staging) {
+            Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction Stop
+        }
+
+        # Copia completa a una carpeta temporal (nueva en cada intento).
+        & robocopy $link $staging /E /COPY:DAT /DCOPY:DAT /XJ /R:2 /W:2 /NP "/LOG:$log" | Out-Null
+        $rc = $LASTEXITCODE
+        if ($rc -ge 8) {
+            Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Warning ("[vscode] La copia ha fallado (robocopy {0}; detalles en {1}). No se ha cambiado nada; se reintentara en el proximo 'chezmoi apply'." -f $rc, $log)
+            exit 0
+        }
+        if (Test-VSCodeRunning) {
+            Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Warning "[vscode] VS Code se ha abierto durante la copia. No se ha cambiado nada; cierralo y vuelve a ejecutar 'chezmoi apply'."
+            exit 0
+        }
+
+        # Los ficheros que ya gestiona chezmoi (de un apply anterior) mandan
+        # sobre los copiados, para que chezmoi no vea cambios inesperados.
+        $managed = $null
+        if (Test-Path -LiteralPath $target) {
+            $managed = $target
+        } elseif (Test-Path -LiteralPath $aside) {
+            $managed = $aside      # restos de un intento anterior interrumpido
+        }
+        if ($managed) {
+            & robocopy $managed $staging /E /COPY:DAT /XJ /R:2 /W:2 /NP /NFL /NDL /NJH /NJS | Out-Null
+            if ($LASTEXITCODE -ge 8) {
+                Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Warning "[vscode] No se pudieron preparar los ficheros gestionados. No se ha cambiado nada; se reintentara en el proximo 'chezmoi apply'."
+                exit 0
+            }
+        }
+        if (Test-Path -LiteralPath $target) {
+            if (Test-Path -LiteralPath $aside) {
+                Remove-Item -LiteralPath $aside -Recurse -Force -ErrorAction Stop
+            }
+            Rename-Item -LiteralPath $target -NewName (Split-Path $aside -Leaf) -ErrorAction Stop
+        }
+        Rename-Item -LiteralPath $staging -NewName (Split-Path $target -Leaf) -ErrorAction Stop
+        if (Test-Path -LiteralPath $aside) {
+            Remove-Item -LiteralPath $aside -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        # El original se conserva tal cual como copia de seguridad.
+        $backup = "$link.pre-dotfiles-" + (Get-Date -Format 'yyyyMMdd-HHmmss')
+        Rename-Item -LiteralPath $link -NewName (Split-Path $backup -Leaf) -ErrorAction Stop
+
+        New-UserJunction
+        Set-Sentinel
+        Write-Host "[vscode] Hecho: VS Code usa ahora ~/.config/Code/User (la config compartida)." -ForegroundColor Green
+        Write-Host ("[vscode] Copia de seguridad de tu configuracion anterior (incluido tu settings.json): {0}" -f $backup) -ForegroundColor Green
+        Write-Host "[vscode] Puedes borrarla cuando compruebes que todo va bien." -ForegroundColor Green
+        exit 0
+    }
+
+    # --- 3) No existe: VS Code aun no se ha usado (equipo nuevo) -------
+    New-UserJunction
+    Set-Sentinel
+    Write-Host "[vscode] Enlazado %APPDATA%\Code\User -> ~/.config/Code/User." -ForegroundColor Green
+    exit 0
+}
+catch {
+    Write-Warning ("[vscode] No se pudo completar la configuracion de VS Code: {0}" -f $_.Exception.Message)
+    Write-Warning "[vscode] No se ha borrado nada; se reintentara en el proximo 'chezmoi apply'."
+    exit 0
+}
+{{- end -}}
+{{- end -}}

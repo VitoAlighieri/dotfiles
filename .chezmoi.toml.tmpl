@@ -1,7 +1,16 @@
 [add]
     secrets = "ignore"
 
-# El profile de PowerShell se despliega ahora con el script
-# .chezmoiscripts/run_onchange_after_20-deploy-pwsh-profile.ps1.tmpl
-# y los programas con
-# .chezmoiscripts/run_onchange_before_10-install-packages.ps1.tmpl
+{{ if eq .chezmoi.os "windows" -}}
+# Windows: los scripts .ps1 de .chezmoiscripts/ se ejecutan siempre con
+# Windows PowerShell 5.1 (viene en todo Windows), sin cargar el profile y
+# permitiendo scripts locales. Sin esto, en un Windows recien instalado la
+# politica por defecto ("Restricted") bloquea los scripts y el primer
+# `chezmoi init --apply` falla.
+[interpreters.ps1]
+    command = "powershell"
+    args = ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]
+{{ end -}}
+
+# Los scripts (winget, profile de PowerShell, variables de entorno, bat,
+# VS Code...) viven en .chezmoiscripts/ (ver README).
