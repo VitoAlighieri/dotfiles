@@ -7,15 +7,33 @@
 # lo sobrescribe SIN preguntar si ya habia uno tuyo. Antes de eso, este
 # script guarda tu version en settings.json.pre-dotfiles (una sola vez).
 #
+# Si en este equipo se ha usado Settings Sync de VS Code, se para ANTES
+# de tocar nada y pide confirmacion (ver README): si la sincronizacion
+# siguiera activa, subiria los settings compartidos a la nube y borraria
+# tus otros ajustes en todas las maquinas sincronizadas.
+#
 # settings.json del repo: {{ include "dot_config/Code/User/settings.json" | sha256sum }}
 # =====================================================================
-f="$HOME/.config/Code/User/settings.json"
+dir="$HOME/.config/Code/User"
+f="$dir/settings.json"
 src={{ joinPath .chezmoi.sourceDir "dot_config/Code/User/settings.json" | quote }}
 bak="$f.pre-dotfiles"
 
 [ -f "$f" ] || exit 0          # no habia settings.json previo
 [ -e "$bak" ] && exit 0        # la copia ya se hizo antes
 cmp -s "$f" "$src" && exit 0   # ya es igual que el del repo
+
+if [ -d "$dir/sync" ] && [ "${DOTFILES_VSCODE_MIGRATE:-}" != 1 ]; then
+    cat >&2 <<'EOF'
+[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync).
+[vscode] Si sigue activa, al pasar a los settings compartidos los subiria a la nube
+[vscode] y BORRARIA tus otros ajustes en todas las maquinas sincronizadas.
+[vscode] Por eso se detiene este 'chezmoi apply' (no se ha cambiado nada):
+[vscode]   1) En VS Code: Ctrl+Shift+P > 'Settings Sync: Turn Off'
+[vscode]   2) Ejecuta:  DOTFILES_VSCODE_MIGRATE=1 chezmoi apply
+EOF
+    exit 1
+fi
 
 cp -p "$f" "$bak" && echo "[vscode] Tu settings.json anterior se ha guardado en $bak"
 exit 0

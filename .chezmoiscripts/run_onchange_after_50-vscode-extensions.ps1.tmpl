@@ -1,15 +1,17 @@
 {{- if eq .chezmoi.os "windows" -}}
+{{- $code := or (lookPath "code") (stat (joinPath (env "LOCALAPPDATA") "Programs" "Microsoft VS Code" "bin" "code.cmd")) (stat (joinPath (env "ProgramFiles") "Microsoft VS Code" "bin" "code.cmd")) -}}
+{{- $failed := joinPath (env "LOCALAPPDATA") "dotfiles" "vscode-extensions.failed" -}}
 # =====================================================================
 # Extensiones de VS Code (Windows)
 # ---------------------------------------------------------------------
 # Instala las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
 # que falten, p. ej. el tema Catppuccin que activa settings.json.
-# Se reejecuta cuando cambia la lista, cuando `code` pasa a estar en el
-# PATH y mientras falte alguna por instalar (lineas de abajo), asi un fallo
-# puntual (sin red, Marketplace caido...) se reintenta solo.
+# Se reejecuta cuando cambia la lista, cuando aparece VS Code y, si alguna
+# instalacion falla (sin red, Marketplace caido...), en cada
+# `chezmoi apply` hasta que funcione (lineas de abajo).
 #
-# code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
-# pendientes al generarlo: {{ if lookPath "code" }}{{ range .packages.vscode.extensions }}{{ if not (glob (joinPath $.chezmoi.homeDir ".vscode/extensions" (printf "%s-[0-9]*" (lower .)))) }}{{ . }}@{{ now | date "20060102T150405.000000000" }} {{ end }}{{ end }}{{ end }}
+# VS Code detectado al generar este script: {{ if $code }}si{{ else }}no{{ end }}
+# reintento pendiente: {{ if stat $failed }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
 # =====================================================================
 
 $extensions = @(
@@ -17,6 +19,10 @@ $extensions = @(
     '{{ . }}'
 {{- end }}
 )
+
+# Marca de "hubo fallos": hace que el proximo apply vuelva a ejecutar esto.
+$failedMarker = Join-Path $env:LOCALAPPDATA 'dotfiles\vscode-extensions.failed'
+Remove-Item -LiteralPath $failedMarker -Force -ErrorAction SilentlyContinue
 
 # winget puede haber instalado VS Code en este MISMO apply, pero chezmoi
 # arranco con el PATH antiguo: lo recargamos del registro (sin duplicados).
@@ -56,6 +62,7 @@ if (-not $code) {
 
 Write-Host "==> Asegurando extensiones de VS Code..." -ForegroundColor Cyan
 $installed = @(& $code --list-extensions 2>$null) | ForEach-Object { $_.Trim().ToLowerInvariant() }
+$anyFailed = $false
 
 foreach ($ext in $extensions) {
     if ([string]::IsNullOrWhiteSpace($ext)) { continue }
@@ -68,7 +75,17 @@ foreach ($ext in $extensions) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host ("  [OK] {0}" -f $ext) -ForegroundColor Green
     } else {
+        $anyFailed = $true
         Write-Warning ("  No se pudo instalar {0}; se reintentara en el proximo 'chezmoi apply' (a mano: code --install-extension {0})" -f $ext)
+    }
+}
+
+if ($anyFailed) {
+    try {
+        New-Item -ItemType Directory -Path (Split-Path $failedMarker -Parent) -Force -ErrorAction Stop | Out-Null
+        Set-Content -LiteralPath $failedMarker -Value (Get-Date -Format 'o') -Encoding ASCII -ErrorAction Stop
+    } catch {
+        Write-Warning ("  No se pudo guardar la marca de reintento ({0}): {1}" -f $failedMarker, $_.Exception.Message)
     }
 }
 exit 0

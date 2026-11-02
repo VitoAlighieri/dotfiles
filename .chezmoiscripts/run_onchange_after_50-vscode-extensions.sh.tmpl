@@ -1,4 +1,4 @@
-{{- if ne .chezmoi.os "windows" -}}
+{{- if and (ne .chezmoi.os "windows") (not (env "WSL_DISTRO_NAME")) -}}
 #!/bin/sh
 # =====================================================================
 # Extensiones de VS Code (Linux)
@@ -7,17 +7,21 @@
 # instalan las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
 # que falten, p. ej. el tema Catppuccin que activa settings.json.
 # Se reejecuta cuando cambia la lista, cuando `code` pasa a estar en el
-# PATH y mientras falte alguna por instalar (lineas de abajo).
+# PATH y, si alguna instalacion falla, en cada `chezmoi apply` hasta que
+# funcione (lineas de abajo).
+# En WSL no se genera: alli `code` es el VS Code de Windows, cuyas
+# extensiones ya instala el script .ps1.
 #
 # code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
-# pendientes al generarlo: {{ if lookPath "code" }}{{ range .packages.vscode.extensions }}{{ if not (glob (joinPath $.chezmoi.homeDir ".vscode/extensions" (printf "%s-[0-9]*" (lower .)))) }}{{ . }}@{{ now | date "20060102T150405.000000000" }} {{ end }}{{ end }}{{ end }}
+# reintento pendiente: {{ if stat (joinPath .chezmoi.homeDir ".cache/dotfiles/vscode-extensions.failed") }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
 # =====================================================================
 
-# En WSL, `code` es el VS Code de Windows (ya lo gestiona el script .ps1).
-[ -n "${WSL_DISTRO_NAME:-}" ] && exit 0
+marker="$HOME/.cache/dotfiles/vscode-extensions.failed"
+rm -f "$marker"
 command -v code >/dev/null 2>&1 || exit 0
 
 installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
+failed=0
 
 for ext in{{ range .packages.vscode.extensions }} {{ . | quote }}{{ end }}; do
     lower=$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')
@@ -25,8 +29,14 @@ for ext in{{ range .packages.vscode.extensions }} {{ . | quote }}{{ end }}; do
         continue
     fi
     echo "[vscode] Instalando $ext ..."
-    code --install-extension "$ext" >/dev/null 2>&1 ||
+    if ! code --install-extension "$ext" >/dev/null 2>&1; then
         echo "[vscode] No se pudo instalar $ext; se reintentara en el proximo 'chezmoi apply' (a mano: code --install-extension $ext)" >&2
+        failed=1
+    fi
 done
+
+if [ "$failed" = 1 ]; then
+    mkdir -p "${marker%/*}" && : > "$marker"
+fi
 exit 0
 {{- end -}}
