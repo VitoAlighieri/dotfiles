@@ -35,7 +35,10 @@
 # (settings.json siempre; atajos y snippets solo si los has anadido).
 $ManagedKeybindings = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/Code/User/*keybindings.json*") }}true{{ else }}false{{ end }}
 $ManagedSnippets    = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/Code/User/*snippets*") }}true{{ else }}false{{ end }}
-$Confirmed          = ($env:DOTFILES_VSCODE_MIGRATE -eq '1')
+# Confirmaciones: 'sync-off' = "ya he desactivado Settings Sync" (y vale
+# para todo); '1' vale para lo demas, pero NUNCA para Settings Sync.
+$SyncOff            = ($env:DOTFILES_VSCODE_MIGRATE -eq 'sync-off')
+$Confirmed          = $SyncOff -or ($env:DOTFILES_VSCODE_MIGRATE -eq '1')
 
 $codeRoot = Join-Path $env:APPDATA 'Code'
 $link     = Join-Path $codeRoot 'User'               # lo que lee VS Code
@@ -44,8 +47,9 @@ $sentinel = Join-Path $target '.dotfiles-junction'   # marca: "ya se enlazo"
 $staging  = "$target.migrating"
 $log      = Join-Path $env:TEMP 'dotfiles-vscode-migracion.log'
 $stamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
-$confirm  = "`$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply"
-$noLink   = "New-Item -ItemType File `"`$env:APPDATA\Code\.dotfiles-no-junction`""
+$confirm     = "`$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; `$env:DOTFILES_VSCODE_MIGRATE=`$null"
+$confirmSync = "`$env:DOTFILES_VSCODE_MIGRATE='sync-off'; chezmoi apply; `$env:DOTFILES_VSCODE_MIGRATE=`$null"
+$noLink      = "New-Item -ItemType File `"`$env:APPDATA\Code\.dotfiles-no-junction`""
 
 function ConvertTo-NormalPath {
     param([string]$Path)
@@ -216,9 +220,10 @@ try {
 
     # Hay una copia de una migracion que no termino (p. ej. VS Code se abrio a
     # mitad y creo otra carpeta User): lo normal es recuperarla, no enlazar
-    # encima y dejarla olvidada.
+    # encima y dejarla olvidada. Ninguna confirmacion se salta esto: hay que
+    # recuperarla, o apartarla/borrarla si ya no hace falta.
     $leftover = @(Get-ChildItem -LiteralPath $codeRoot -Directory -Force -Filter 'User.pre-dotfiles-*' -ErrorAction SilentlyContinue | Sort-Object Name)
-    if (($leftover.Count -gt 0) -and -not $Confirmed) {
+    if ($leftover.Count -gt 0) {
         $last = $leftover[-1].FullName
         Write-Warning "[vscode] Hay una copia de seguridad de una migracion de VS Code que no llego a terminar (seguramente tu configuracion original):"
         Write-Warning ("    {0}" -f $last)
@@ -227,7 +232,7 @@ try {
         } else {
             Write-Warning ("[vscode] Para recuperarla (con VS Code cerrado):  Rename-Item `"{0}`" User   y despues 'chezmoi apply'." -f $last)
         }
-        Write-Warning ("[vscode] Si ya no la necesitas, borrala, o sigue sin ella con:  {0}" -f $confirm)
+        Write-Warning "[vscode] Si ya no la necesitas, borrala (o muevela fuera de %APPDATA%\Code) y vuelve a ejecutar 'chezmoi apply'."
         Write-Warning ("[vscode] Si prefieres no enlazar VS Code en este equipo:  {0}" -f $noLink)
         exit 0
     }
@@ -238,9 +243,9 @@ try {
             Write-Warning "[vscode] VS Code esta abierto (o actualizandose). Cierralo y vuelve a ejecutar 'chezmoi apply' (desde una terminal que no sea la de VS Code) para pasar su configuracion a ~/.config/Code/User. Hasta entonces sigue con la de siempre."
             exit 0
         }
-        if ((Test-Path -LiteralPath (Join-Path $link 'sync')) -and -not $Confirmed) {
+        if ((Test-Path -LiteralPath (Join-Path $link 'sync')) -and -not $SyncOff) {
             Write-Warning "[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync). Si sigue activa, al pasar a los settings compartidos los subiria a la nube y BORRARIA tus otros ajustes en todas las maquinas sincronizadas."
-            Write-Warning ("[vscode] 1) En VS Code: Ctrl+Shift+P > 'Settings Sync: Turn Off'.  2) Cierra VS Code.  3) Ejecuta:  {0}" -f $confirm)
+            Write-Warning ("[vscode] 1) En VS Code: Ctrl+Shift+P > 'Settings Sync: Turn Off'.  2) Cierra VS Code.  3) Ejecuta:  {0}" -f $confirmSync)
             Write-Warning ("[vscode] Si prefieres no enlazar VS Code en este equipo:  {0}" -f $noLink)
             exit 0
         }
@@ -342,7 +347,11 @@ try {
             }
         }
         if (-not $committed) {
-            Write-Warning "[vscode] Se reintentara en el proximo 'chezmoi apply'."
+            if ($backup -and (Test-Path -LiteralPath $backup)) {
+                Write-Warning "[vscode] Recupera esa copia antes de volver a ejecutar 'chezmoi apply' (si no, te lo recordara)."
+            } else {
+                Write-Warning "[vscode] Se reintentara en el proximo 'chezmoi apply'."
+            }
             exit 0
         }
 
@@ -353,7 +362,7 @@ try {
         }
         Write-Host "[vscode] Hecho: VS Code usa ahora ~/.config/Code/User (la config compartida)." -ForegroundColor Green
         Write-Host ("[vscode] Copia de seguridad de tu configuracion anterior (incluido tu settings.json): {0}" -f $backup) -ForegroundColor Green
-        Write-Host "[vscode] Puedes borrarla cuando compruebes que todo va bien." -ForegroundColor Green
+        Write-Host "[vscode] Puedes borrarla cuando compruebes que todo va bien (es la que usa 'Deshacerlo' en el README)." -ForegroundColor Green
         if ($keepOldTarget) {
             Write-Host ("[vscode] Habia datos anteriores en ~/.config/Code/User; se han guardado en {0}" -f $targetMovedTo) -ForegroundColor Yellow
         }

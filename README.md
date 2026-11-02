@@ -173,21 +173,27 @@ abra.
    sesiones, historial…) a `~/.config/Code/User`. El original se conserva entero
    como copia de seguridad en `%APPDATA%\Code\User.pre-dotfiles-<fecha>`
    (incluido tu `settings.json` anterior). Puedes borrarla cuando compruebes que
-   todo va bien. Si algo falla a mitad, se deshace solo y todo queda como estaba.
+   todo va bien (es la que recupera *Deshacerlo*, más abajo). Si algo falla a
+   mitad, se deshace solo; y si no pudiera dejarlo todo como estaba, te dice
+   dónde está tu copia y no sigue hasta que la recuperes o la apartes.
 3. **Settings Sync**: si alguna vez usaste la sincronización de VS Code, el
    script se para y te avisa. Si siguiera activa, subiría los settings
    compartidos a la nube y **borraría tus otros ajustes en todas las máquinas
    sincronizadas**. Desactívala (Ctrl+Shift+P → `Settings Sync: Turn Off`),
-   cierra VS Code y confirma con:
+   cierra VS Code y confirma con (en una línea):
    ```powershell
-   $env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply
+   $env:DOTFILES_VSCODE_MIGRATE='sync-off'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null
    ```
-   Si quieres seguir usando Settings Sync para otras cosas (extensiones,
-   atajos…), al volver a activarla desmarca **Settings** en
-   `Settings Sync: Configure`.
+   Si después quieres seguir usando Settings Sync para otras cosas
+   (extensiones, atajos…), al volver a activarla (Ctrl+Shift+P →
+   `Settings Sync: Backup and Sync Settings...`) **desmarca Settings en la lista
+   que aparece antes de iniciar sesión**: nada más iniciar sesión sincroniza, y
+   desmarcarlo después ya llega tarde. Si te sale un conflicto en *Settings*, es
+   que seguía marcado: cancela y empieza de nuevo (nunca *Accept Local*).
 4. Si dentro de tu carpeta de usuario hay **enlaces** (por ejemplo, una carpeta
    de snippets enlazada a otro sitio), la copia no los incluye: el script te
-   los enseña y espera a que lo confirmes de la misma forma.
+   los enseña y espera a que lo confirmes con
+   `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null`.
 5. Si usas **perfiles** de VS Code, los settings compartidos solo se aplican al
    perfil *Default*.
 
@@ -203,10 +209,20 @@ Rename-Item "$env:APPDATA\Code\User.pre-dotfiles-<fecha>" User
 New-Item -ItemType File "$env:APPDATA\Code\.dotfiles-no-junction"   # que chezmoi no lo vuelva a enlazar
 ```
 
+Si no tienes copia `User.pre-dotfiles-*` (en un equipo instalado desde cero no
+se crea, o ya la borraste), en lugar del `Rename-Item` copia tu configuración
+actual; si no, VS Code arrancará vacío:
+
+```powershell
+robocopy "$HOME\.config\Code\User" "$env:APPDATA\Code\User" /E /XF .dotfiles-junction
+```
+
 Lo que cambiaste mientras estaba enlazado sigue en `~/.config/Code/User`. Para
 volver a enlazarlo, borra `.dotfiles-no-junction` y, con VS Code cerrado,
-ejecuta `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply` (lo que hubiera en
-`~/.config/Code/User` se guarda aparte, en `~/.config/Code/User.prev-<fecha>`).
+ejecuta `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null`
+(lo que hubiera en `~/.config/Code/User` se guarda aparte, en
+`~/.config/Code/User.prev-<fecha>`). Si en ese equipo volviste a usar Settings
+Sync, el script te pedirá antes desactivarla, como en el paso 3.
 
 ### En Linux
 
@@ -214,20 +230,27 @@ La primera vez que chezmoi gestiona `~/.config/Code/User/settings.json` lo
 sobrescribe sin preguntar. Por eso, si ya tenías uno, antes se guarda en
 `settings.json.pre-dotfiles` (script `run_onchange_before_05-vscode-settings-backup`).
 Hecho eso, el script deja la marca `~/.config/Code/User/.dotfiles-adopted` y no
-vuelve a intervenir.
+vuelve a intervenir. Esa copia solo se hace en un `chezmoi apply` completo (no
+con `chezmoi apply <ruta>`), así que la primera vez usa el `apply` normal.
 
-El `apply` se detiene sin cambiar nada en dos casos:
+En estos casos chezmoi **no toca VS Code** en ese equipo (ningún comando, ni
+`apply <ruta>` ni `edit --apply`), te avisa en cada `apply` y el resto de los
+dotfiles se aplica igual (lo decide `.chezmoitemplates/vscode-linux-state`):
 
-- La primera vez, si en ese equipo has usado **Settings Sync**, por el mismo
-  motivo que en Windows. Desactívala (Ctrl+Shift+P → `Settings Sync: Turn Off`)
-  y confirma con:
+- Si has usado **Settings Sync** y tu `settings.json` es distinto del
+  compartido, por el mismo motivo que en Windows. Desactívala (Ctrl+Shift+P →
+  `Settings Sync: Turn Off`) y confirma con:
   ```sh
-  DOTFILES_VSCODE_MIGRATE=1 chezmoi apply
+  DOTFILES_VSCODE_MIGRATE=sync-off chezmoi apply
   ```
-- Siempre que `~/.config/Code` o `~/.config/Code/User` sea un **enlace
-  simbólico** (por ejemplo, a Dropbox): chezmoi lo cambiaría por una carpeta
-  normal y VS Code dejaría de ver el resto de su configuración. El aviso te da
-  el comando para convertirlo en una carpeta normal con el mismo contenido.
+- Si `~/.config/Code` o `~/.config/Code/User` es un **enlace simbólico** (por
+  ejemplo, a Dropbox): chezmoi lo cambiaría por una carpeta normal y VS Code
+  dejaría de ver el resto de su configuración. El aviso te da el comando para
+  convertirlo en una carpeta normal con el mismo contenido (con VS Code
+  cerrado).
+- Si prefieres que chezmoi no toque VS Code en ese equipo:
+  `touch ~/.config/Code/.dotfiles-no-manage` (bórralo para volver a
+  gestionarlo).
 
 ### Atajos y snippets
 
@@ -263,6 +286,7 @@ Ojo: después, el primer `apply` en cada otra máquina sustituirá su
 .chezmoiignore.tmpl   Qué NO desplegar (por SO)
 .chezmoiremove        Limpieza de rutas antiguas (Windows)
 .chezmoidata/         Datos para plantillas (lista de paquetes)
+.chezmoitemplates/    Plantillas compartidas (estado de VS Code en Linux)
 .chezmoiscripts/      Scripts (winget, variables de entorno, profile, bat, VS Code)
 dot_config/           -> ~/.config  (común a todos los SO)
 AppData/              -> ~/AppData  (solo Windows: Flow Launcher)
