@@ -1,4 +1,8 @@
 {{- if eq .chezmoi.os "windows" -}}
+{{- /* Solo cuando VS Code ya usa la config compartida (enlace hecho, ver before_20). */ -}}
+{{- $userDir := joinPath (env "APPDATA") "Code" "User" -}}
+{{- $l := lstat $userDir -}}
+{{- if and $l (not $l.isDir) (stat (joinPath $userDir ".dotfiles-junction")) -}}
 {{- $code := or (lookPath "code") (stat (joinPath (env "LOCALAPPDATA") "Programs" "Microsoft VS Code" "bin" "code.cmd")) (stat (joinPath (env "ProgramFiles") "Microsoft VS Code" "bin" "code.cmd")) -}}
 {{- $pending := joinPath (env "LOCALAPPDATA") "dotfiles" "vscode-extensions.pending" -}}
 # =====================================================================
@@ -9,6 +13,8 @@
 # Se reejecuta cuando cambia la lista, cuando aparece VS Code y, si alguna
 # instalacion falla o se interrumpe (sin red, Marketplace caido...), en
 # cada `chezmoi apply` hasta que funcione (lineas de abajo).
+# Solo se genera cuando %APPDATA%\Code\User ya esta enlazado a la config
+# compartida (o sea, no mientras la migracion espera, ni con el opt-out).
 #
 # VS Code detectado al generar este script: {{ if $code }}si{{ else }}no{{ end }}
 # reintento pendiente: {{ if stat $pending }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
@@ -92,4 +98,5 @@ if (-not $anyFailed) {
     Remove-Item -LiteralPath $pendingMarker -Force -ErrorAction SilentlyContinue
 }
 exit 0
+{{- end -}}
 {{- end -}}

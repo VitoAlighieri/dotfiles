@@ -14,24 +14,21 @@ LICENSE
 # tokens de inicio de sesion...) y NUNCA debe acabar en el repo: con estas
 # reglas `chezmoi add` lo rechaza aunque se lo pidas por error.
 #
-# En Linux, segun .chezmoitemplates/vscode-linux-state (ver README):
-#  - optout/linked: no se toca nada de ~/.config/Code en este equipo.
-#  - sync: settings.json espera a que confirmes que Settings Sync esta
-#    desactivada. (Hay que quitar su excepcion "!": en .chezmoiignore las
-#    excepciones mandan sobre cualquier otra regla.)
+# En Linux, en los estados optout, linked y sync de
+# .chezmoitemplates/vscode-linux-state (ver README) no se toca nada de
+# ~/.config/Code en este equipo. Se ignora la carpeta entera: asi chezmoi ni
+# entra en ella, y las excepciones "!" de abajo no cuentan.
 {{- $vscode := "" }}
 {{- if ne .chezmoi.os "windows" }}
 {{-   $vscode = includeTemplate "vscode-linux-state" . | trim }}
 {{- end }}
-{{- if or (eq $vscode "optout") (eq $vscode "linked") }}
+{{- if has $vscode (list "optout" "linked" "sync") }}
 .config/Code
 {{- end }}
 .config/Code/*
 !.config/Code/User
 .config/Code/User/*
-{{- if ne $vscode "sync" }}
 !.config/Code/User/settings.json
-{{- end }}
 !.config/Code/User/keybindings.json
 !.config/Code/User/snippets
 

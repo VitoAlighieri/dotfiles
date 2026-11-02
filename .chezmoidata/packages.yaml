@@ -36,7 +36,7 @@ packages:
       - id: Microsoft.PowerShell   # PowerShell 7  (solo Windows; dot_config/powershell)
       - id: Flow-Launcher.Flow-Launcher  # Lanzador  (solo Windows; AppData/Roaming/FlowLauncher)
       - id: Microsoft.VisualStudioCode   # VS Code   (se instala solo en Windows;
-        upgrade: false                   #            settings comunes en dot_config/Code).
+        upgrade: false                   #            settings comunes en dot_config/private_Code).
                                          #   upgrade: false -> se actualiza solo; el
                                          #   `winget upgrade` diario fallaria si esta abierto.
 

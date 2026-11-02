@@ -21,7 +21,7 @@ SO** y, si lo cambias en uno y lo subes, se aplica igual en el resto.
 | bat          | `dot_config/bat/`                       | `~/.config/bat/`          | Todos     |
 | lsd          | `dot_config/lsd/`                       | `~/.config/lsd/`          | Todos     |
 | ripgrep      | `dot_config/ripgrep/config`             | `~/.config/ripgrep/config`| Todos     |
-| VS Code      | `dot_config/Code/User/settings.json`    | `~/.config/Code/User/`    | Todos (\*)|
+| VS Code      | `dot_config/private_Code/User/settings.json` | `~/.config/Code/User/` | Todos (\*)|
 | PowerShell 7 | `dot_config/powershell/profile.ps1`     | `Documents\PowerShell\`   | Windows   |
 | Flow Launcher| `AppData/Roaming/FlowLauncher/Settings/`| `%APPDATA%\FlowLauncher\` | Windows   |
 
@@ -143,7 +143,7 @@ El mismo tema en todo, en todas las máquinas:
 
 ## VS Code
 
-- **Settings comunes**: `dot_config/Code/User/settings.json` → tema Catppuccin
+- **Settings comunes**: `dot_config/private_Code/User/settings.json` → tema Catppuccin
   Macchiato, JetBrainsMono Nerd Font (editor y terminal) y las mismas
   preferencias de edición que Neovim (tabs de 4 espacios sin autodetección,
   números relativos, `scrolloff=8`, sin espacios finales…).
@@ -154,7 +154,10 @@ El mismo tema en todo, en todas las máquinas:
 - **Extensiones**: la lista está en `.chezmoidata/packages.yaml`
   (`vscode.extensions`). Los scripts `run_onchange_after_50-vscode-extensions`
   instalan las que falten y reintentan solas si alguna falla (hay extras
-  comentados equivalentes a los LSP de Neovim).
+  comentados equivalentes a los LSP de Neovim). Solo actúan cuando VS Code ya
+  usa la config compartida en ese equipo (en Windows, una vez enlazado; en
+  Linux, una vez adoptado): mientras espera, o con el opt-out, no se instala
+  nada.
 
 ### Cómo se comparte en Windows
 
@@ -198,15 +201,19 @@ abra.
    perfil *Default*.
 
 Si en algún equipo prefieres que VS Code **no** se enlace (por ejemplo, para
-seguir con Settings Sync allí), crea el fichero
-`%APPDATA%\Code\.dotfiles-no-junction` y el script no volverá a tocarlo.
+seguir con Settings Sync allí), crea este fichero y el script no volverá a
+tocarlo (en un equipo nuevo, hazlo antes del `chezmoi init --apply`):
+
+```powershell
+New-Item -ItemType File -Force "$env:APPDATA\Code\.dotfiles-no-junction"
+```
 
 **Deshacerlo** (con VS Code cerrado, en PowerShell):
 
 ```powershell
 [IO.Directory]::Delete("$env:APPDATA\Code\User")    # borra solo el enlace, no los datos
 Rename-Item "$env:APPDATA\Code\User.pre-dotfiles-<fecha>" User
-New-Item -ItemType File "$env:APPDATA\Code\.dotfiles-no-junction"   # que chezmoi no lo vuelva a enlazar
+New-Item -ItemType File -Force "$env:APPDATA\Code\.dotfiles-no-junction"   # que chezmoi no lo vuelva a enlazar
 ```
 
 Si no tienes copia `User.pre-dotfiles-*` (en un equipo instalado desde cero no
@@ -237,8 +244,8 @@ En estos casos chezmoi **no toca VS Code** en ese equipo (ningún comando, ni
 `apply <ruta>` ni `edit --apply`), te avisa en cada `apply` y el resto de los
 dotfiles se aplica igual (lo decide `.chezmoitemplates/vscode-linux-state`):
 
-- Si has usado **Settings Sync** y tu `settings.json` es distinto del
-  compartido, por el mismo motivo que en Windows. Desactívala (Ctrl+Shift+P →
+- Si has usado **Settings Sync** (existe `~/.config/Code/User/sync`), por el
+  mismo motivo que en Windows. Desactívala (Ctrl+Shift+P →
   `Settings Sync: Turn Off`) y confirma con:
   ```sh
   DOTFILES_VSCODE_MIGRATE=sync-off chezmoi apply
@@ -248,21 +255,40 @@ dotfiles se aplica igual (lo decide `.chezmoitemplates/vscode-linux-state`):
   dejaría de ver el resto de su configuración. El aviso te da el comando para
   convertirlo en una carpeta normal con el mismo contenido (con VS Code
   cerrado).
-- Si prefieres que chezmoi no toque VS Code en ese equipo:
-  `touch ~/.config/Code/.dotfiles-no-manage` (bórralo para volver a
-  gestionarlo).
+- Si prefieres que chezmoi no toque VS Code en ese equipo (en uno nuevo,
+  antes del primer `apply`):
+  ```sh
+  mkdir -p ~/.config/Code && touch ~/.config/Code/.dotfiles-no-manage
+  ```
+  Bórralo para volver a gestionarlo.
 
 ### Atajos y snippets
 
 No se gestionan por defecto (así la migración conserva los tuyos). Para
-sincronizarlos también:
+sincronizarlos también, hazlo desde la máquina que tenga los buenos, con VS
+Code cerrado:
 
 ```sh
-chezmoi add ~/.config/Code/User/snippets
-chezmoi add ~/.config/Code/User/keybindings.json   # solo si existe: VS Code no lo crea hasta que cambias algún atajo
+cd ~/.config/Code/User
+chezmoi add snippets
+chezmoi add keybindings.json        # solo si existe: VS Code no lo crea hasta que cambias algún atajo
+chezmoi managed --include=symlinks  # no debe salir nada de .config/Code
 ```
 
-Ojo: después, el primer `apply` en cada otra máquina sustituirá su
+Ojo con los **enlaces simbólicos** (Linux): chezmoi guarda un enlace como
+enlace, y en las demás máquinas **borraría** su carpeta de snippets entera para
+poner el enlace. Antes de añadirlos, mira que `ls -ld snippets keybindings.json`
+no muestre `->`; si lo muestra, conviértelos primero en carpeta/fichero normal:
+
+```sh
+cp -aT "$(readlink -f snippets)" snippets.tmp && rm snippets && mv -T snippets.tmp snippets
+cp --remove-destination "$(readlink -f keybindings.json)" keybindings.json
+```
+
+Si `chezmoi managed --include=symlinks` lista alguno, quítalo del repo con
+`chezmoi forget <ruta>` antes de subir nada, conviértelo y vuelve a añadirlo.
+
+Después, el primer `apply` en cada otra máquina sustituirá su
 `keybindings.json` y los snippets que se llamen igual. El resto de
 `~/.config/Code` (sesiones, cachés, tokens…) es estado de cada equipo:
 `.chezmoiignore` impide que acabe en el repo.

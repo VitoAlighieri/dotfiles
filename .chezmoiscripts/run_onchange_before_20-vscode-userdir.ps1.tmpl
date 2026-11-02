@@ -33,8 +33,8 @@
 
 # Lo que chezmoi gestiona dentro de ~/.config/Code/User segun el repo
 # (settings.json siempre; atajos y snippets solo si los has anadido).
-$ManagedKeybindings = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/Code/User/*keybindings.json*") }}true{{ else }}false{{ end }}
-$ManagedSnippets    = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/Code/User/*snippets*") }}true{{ else }}false{{ end }}
+$ManagedKeybindings = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/private_Code/User/*keybindings.json*") }}true{{ else }}false{{ end }}
+$ManagedSnippets    = ${{ if glob (joinPath .chezmoi.sourceDir "dot_config/private_Code/User/*snippets*") }}true{{ else }}false{{ end }}
 # Confirmaciones: 'sync-off' = "ya he desactivado Settings Sync" (y vale
 # para todo); '1' vale para lo demas, pero NUNCA para Settings Sync.
 $SyncOff            = ($env:DOTFILES_VSCODE_MIGRATE -eq 'sync-off')
@@ -49,7 +49,7 @@ $log      = Join-Path $env:TEMP 'dotfiles-vscode-migracion.log'
 $stamp    = Get-Date -Format 'yyyyMMdd-HHmmss'
 $confirm     = "`$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; `$env:DOTFILES_VSCODE_MIGRATE=`$null"
 $confirmSync = "`$env:DOTFILES_VSCODE_MIGRATE='sync-off'; chezmoi apply; `$env:DOTFILES_VSCODE_MIGRATE=`$null"
-$noLink      = "New-Item -ItemType File `"`$env:APPDATA\Code\.dotfiles-no-junction`""
+$noLink      = "New-Item -ItemType File -Force `"`$env:APPDATA\Code\.dotfiles-no-junction`""
 
 function ConvertTo-NormalPath {
     param([string]$Path)
@@ -126,10 +126,15 @@ function New-UserJunction {
     New-Item -ItemType Junction -Path $link -Target $target -ErrorAction Stop | Out-Null
 }
 
+# La marca guarda tambien el nombre de la copia de una migracion TERMINADA,
+# para no confundirla despues con la de una migracion interrumpida.
 function Set-Sentinel {
+    param([string]$Backup)
+    if (-not $Backup -and (Test-Path -LiteralPath $sentinel)) { return }   # conserva lo apuntado
+    $text = @('Enlace creado por los dotfiles: %APPDATA%\Code\User -> ~/.config/Code/User')
+    if ($Backup) { $text += 'copia: ' + (Split-Path $Backup -Leaf) }
     try {
-        Set-Content -LiteralPath $sentinel -Encoding ASCII -ErrorAction Stop `
-            -Value 'Enlace creado por los dotfiles: %APPDATA%\Code\User -> ~/.config/Code/User'
+        Set-Content -LiteralPath $sentinel -Encoding ASCII -ErrorAction Stop -Value $text
     } catch {
         # El enlace funciona igual; sin la marca, el proximo apply la vuelve a escribir.
         Write-Warning ("[vscode] No se pudo escribir {0}: {1}" -f $sentinel, $_.Exception.Message)
@@ -209,31 +214,36 @@ try {
         exit 0
     }
 
+    # Hay una copia de una migracion que no termino (p. ej. VS Code se abrio a
+    # mitad y creo otra carpeta User, o se corto a la fuerza): lo normal es
+    # recuperarla, no enlazar encima y dejarla olvidada. Va antes que nada y
+    # ninguna confirmacion se la salta. Las copias de migraciones terminadas
+    # (apuntadas en la marca) no cuentan.
+    $done = ''
+    $records = @(Get-Content -LiteralPath $sentinel -ErrorAction SilentlyContinue | Where-Object { $_ -like 'copia: *' })
+    if ($records.Count -gt 0) { $done = $records[-1].Substring(7).Trim() }
+    $leftover = @(Get-ChildItem -LiteralPath $codeRoot -Directory -Force -Filter 'User.pre-dotfiles-*' -ErrorAction SilentlyContinue |
+            Where-Object { [string]::CompareOrdinal($_.Name, $done) -gt 0 } | Sort-Object Name)
+    if ($leftover.Count -gt 0) {
+        $last = $leftover[-1].FullName
+        Write-Warning "[vscode] Hay una copia de seguridad de una migracion de VS Code que no llego a terminar (seguramente tu configuracion original):"
+        Write-Warning ("    {0}" -f $last)
+        if ($item) {
+            Write-Warning ("[vscode] Para recuperarla, con VS Code cerrado ejecuta esto y despues 'chezmoi apply':  Rename-Item `"`$env:APPDATA\Code\User`" User.descartada-{1}; Rename-Item `"{0}`" User" -f $last, $stamp)
+        } else {
+            Write-Warning ("[vscode] Para recuperarla, con VS Code cerrado ejecuta esto y despues 'chezmoi apply':  Rename-Item `"{0}`" User" -f $last)
+        }
+        Write-Warning "[vscode] Si ya no la necesitas, borrala (o muevela fuera de %APPDATA%\Code) y vuelve a ejecutar 'chezmoi apply'."
+        Write-Warning ("[vscode] Si prefieres no enlazar VS Code en este equipo:  {0}" -f $noLink)
+        exit 0
+    }
+
     # Ya se enlazo alguna vez (la marca sigue en ~/.config/Code/User) y el
     # enlace se ha quitado a mano: no se rehace sin confirmarlo.
     if ((Test-Path -LiteralPath $sentinel) -and -not $Confirmed) {
         Write-Warning "[vscode] %APPDATA%\Code\User estuvo enlazado a ~/.config/Code/User y el enlace se ha quitado a mano; no se vuelve a enlazar solo."
         Write-Warning ("[vscode] Para dejarlo asi (y no ver mas este aviso):  {0}" -f $noLink)
         Write-Warning ("[vscode] Para volver a enlazarlo (con VS Code cerrado):  {0}" -f $confirm)
-        exit 0
-    }
-
-    # Hay una copia de una migracion que no termino (p. ej. VS Code se abrio a
-    # mitad y creo otra carpeta User): lo normal es recuperarla, no enlazar
-    # encima y dejarla olvidada. Ninguna confirmacion se salta esto: hay que
-    # recuperarla, o apartarla/borrarla si ya no hace falta.
-    $leftover = @(Get-ChildItem -LiteralPath $codeRoot -Directory -Force -Filter 'User.pre-dotfiles-*' -ErrorAction SilentlyContinue | Sort-Object Name)
-    if ($leftover.Count -gt 0) {
-        $last = $leftover[-1].FullName
-        Write-Warning "[vscode] Hay una copia de seguridad de una migracion de VS Code que no llego a terminar (seguramente tu configuracion original):"
-        Write-Warning ("    {0}" -f $last)
-        if ($item) {
-            Write-Warning ("[vscode] Para recuperarla (con VS Code cerrado):  Rename-Item `"`$env:APPDATA\Code\User`" User.descartada; Rename-Item `"{0}`" User   y despues 'chezmoi apply'." -f $last)
-        } else {
-            Write-Warning ("[vscode] Para recuperarla (con VS Code cerrado):  Rename-Item `"{0}`" User   y despues 'chezmoi apply'." -f $last)
-        }
-        Write-Warning "[vscode] Si ya no la necesitas, borrala (o muevela fuera de %APPDATA%\Code) y vuelve a ejecutar 'chezmoi apply'."
-        Write-Warning ("[vscode] Si prefieres no enlazar VS Code en este equipo:  {0}" -f $noLink)
         exit 0
     }
 
@@ -356,7 +366,7 @@ try {
         }
 
         # c) Hecho.
-        Set-Sentinel
+        Set-Sentinel -Backup $backup
         if ($movedTarget -and -not $keepOldTarget) {
             Remove-Item -LiteralPath $targetMovedTo -Recurse -Force -ErrorAction SilentlyContinue
         }

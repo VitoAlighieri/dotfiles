@@ -10,16 +10,16 @@
 # script guarda tu version en settings.json.pre-dotfiles y deja la marca
 # ~/.config/Code/User/.dotfiles-adopted; despues deja de generarse.
 #
-# Mientras tanto, .chezmoiignore.tmpl aparta VS Code (y este script solo
-# avisa, el resto del apply sigue) si:
+# Mientras tanto, .chezmoiignore.tmpl aparta VS Code entero (y este script
+# solo avisa, el resto del apply sigue) si:
 #   - ~/.config/Code o ~/.config/Code/User es un enlace simbolico: chezmoi
 #     lo cambiaria por una carpeta normal y VS Code dejaria de ver el resto
 #     de su configuracion;
-#   - se ha usado Settings Sync y tu settings.json es distinto: si la
-#     sincronizacion siguiera activa, subiria los settings compartidos a la
-#     nube y borraria tus otros ajustes en todas las maquinas sincronizadas.
+#   - se ha usado Settings Sync: si siguiera activa, subiria a la nube los
+#     settings (y atajos y snippets) compartidos y borraria tus otros
+#     ajustes en todas las maquinas sincronizadas.
 # Para que chezmoi no toque VS Code en este equipo:
-#     touch ~/.config/Code/.dotfiles-no-manage
+#     mkdir -p ~/.config/Code && touch ~/.config/Code/.dotfiles-no-manage
 #
 # estado: {{ $state }} (ver .chezmoitemplates/vscode-linux-state)
 # pendiente: {{ now | date "2006-01-02T15:04:05.000000000" }}
@@ -49,10 +49,10 @@ exit 0
 {{- else if eq $state "sync" }}
 
 cat >&2 <<'EOF'
-[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync) y tu settings.json
-[vscode] es distinto del compartido. Si la sincronizacion siguiera activa, al pasar a los settings
-[vscode] compartidos los subiria a la nube y BORRARIA tus otros ajustes en todas las maquinas
-[vscode] sincronizadas. Por eso chezmoi aun no toca tu settings.json (el resto si se aplica):
+[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync). Si siguiera
+[vscode] activa, al pasar a los settings compartidos los subiria a la nube y BORRARIA tus otros
+[vscode] ajustes en todas las maquinas sincronizadas. Por eso chezmoi aun no toca VS Code (el
+[vscode] resto de los dotfiles si se aplica):
 [vscode]   1) En VS Code: Ctrl+Shift+P > 'Settings Sync: Turn Off'
 [vscode]   2) Ejecuta:  DOTFILES_VSCODE_MIGRATE=sync-off chezmoi apply
 [vscode] Para que chezmoi no toque VS Code en este equipo:  touch ~/.config/Code/.dotfiles-no-manage
@@ -61,7 +61,7 @@ exit 0
 {{- else }}
 dir="$HOME/.config/Code/User"
 f="$dir/settings.json"
-src={{ joinPath .chezmoi.sourceDir "dot_config/Code/User/settings.json" | quote }}
+src={{ joinPath .chezmoi.sourceDir "dot_config/private_Code/User/settings.json" | quote }}
 bak="$f.pre-dotfiles"
 
 if [ -f "$f" ] && ! cmp -s "$f" "$src"; then

@@ -1,7 +1,7 @@
 // =====================================================================
 // VS Code: settings COMPARTIDOS en todas las maquinas (Windows y Linux)
 // ---------------------------------------------------------------------
-// Gestionado con chezmoi: dot_config/Code/User/settings.json
+// Gestionado con chezmoi: dot_config/private_Code/User/settings.json
 //   - Linux:   VS Code lo lee de forma nativa (~/.config/Code/User).
 //   - Windows: %APPDATA%\Code\User es un enlace a ~/.config/Code/User.
 // Si cambias algo desde VS Code: mira `chezmoi diff`, y luego

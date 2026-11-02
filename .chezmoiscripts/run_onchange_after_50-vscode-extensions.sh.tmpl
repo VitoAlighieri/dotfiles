@@ -1,4 +1,4 @@
-{{- if and (ne .chezmoi.os "windows") (not (env "WSL_DISTRO_NAME")) -}}
+{{- if and (ne .chezmoi.os "windows") (not (env "WSL_DISTRO_NAME")) (has (includeTemplate "vscode-linux-state" . | trim) (list "new" "adopted")) -}}
 #!/bin/sh
 # =====================================================================
 # Extensiones de VS Code (Linux)
@@ -10,7 +10,9 @@
 # PATH y, si alguna instalacion falla o se interrumpe, en cada
 # `chezmoi apply` hasta que funcione (lineas de abajo).
 # En WSL no se genera: alli `code` es el VS Code de Windows, cuyas
-# extensiones ya instala el script .ps1.
+# extensiones ya instala el script .ps1. Tampoco mientras chezmoi no
+# gestione VS Code en este equipo (opt-out, enlace simbolico o pendiente
+# de confirmar Settings Sync: ver .chezmoitemplates/vscode-linux-state).
 #
 # code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
 # reintento pendiente: {{ if stat (joinPath .chezmoi.homeDir ".cache/dotfiles/vscode-extensions.pending") }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
