@@ -191,6 +191,10 @@ abra.
 5. Si usas **perfiles** de VS Code, los settings compartidos solo se aplican al
    perfil *Default*.
 
+Si en algún equipo prefieres que VS Code **no** se enlace (por ejemplo, para
+seguir con Settings Sync allí), crea el fichero
+`%APPDATA%\Code\.dotfiles-no-junction` y el script no volverá a tocarlo.
+
 **Deshacerlo** (con VS Code cerrado, en PowerShell):
 
 ```powershell
@@ -209,14 +213,21 @@ ejecuta `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply` (lo que hubiera en
 La primera vez que chezmoi gestiona `~/.config/Code/User/settings.json` lo
 sobrescribe sin preguntar. Por eso, si ya tenías uno, antes se guarda en
 `settings.json.pre-dotfiles` (script `run_onchange_before_05-vscode-settings-backup`).
+Hecho eso, el script deja la marca `~/.config/Code/User/.dotfiles-adopted` y no
+vuelve a intervenir.
 
-Si en ese equipo has usado **Settings Sync**, ese primer `apply` se detiene
-antes de cambiar nada, por el mismo motivo que en Windows. Desactívala
-(Ctrl+Shift+P → `Settings Sync: Turn Off`) y confirma con:
+El `apply` se detiene sin cambiar nada en dos casos:
 
-```sh
-DOTFILES_VSCODE_MIGRATE=1 chezmoi apply
-```
+- La primera vez, si en ese equipo has usado **Settings Sync**, por el mismo
+  motivo que en Windows. Desactívala (Ctrl+Shift+P → `Settings Sync: Turn Off`)
+  y confirma con:
+  ```sh
+  DOTFILES_VSCODE_MIGRATE=1 chezmoi apply
+  ```
+- Siempre que `~/.config/Code` o `~/.config/Code/User` sea un **enlace
+  simbólico** (por ejemplo, a Dropbox): chezmoi lo cambiaría por una carpeta
+  normal y VS Code dejaría de ver el resto de su configuración. El aviso te da
+  el comando para convertirlo en una carpeta normal con el mismo contenido.
 
 ### Atajos y snippets
 

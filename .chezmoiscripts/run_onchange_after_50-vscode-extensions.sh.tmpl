@@ -7,18 +7,23 @@
 # instalan las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
 # que falten, p. ej. el tema Catppuccin que activa settings.json.
 # Se reejecuta cuando cambia la lista, cuando `code` pasa a estar en el
-# PATH y, si alguna instalacion falla, en cada `chezmoi apply` hasta que
-# funcione (lineas de abajo).
+# PATH y, si alguna instalacion falla o se interrumpe, en cada
+# `chezmoi apply` hasta que funcione (lineas de abajo).
 # En WSL no se genera: alli `code` es el VS Code de Windows, cuyas
 # extensiones ya instala el script .ps1.
 #
 # code en el PATH al generar este script: {{ if lookPath "code" }}si{{ else }}no{{ end }}
-# reintento pendiente: {{ if stat (joinPath .chezmoi.homeDir ".cache/dotfiles/vscode-extensions.failed") }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
+# reintento pendiente: {{ if stat (joinPath .chezmoi.homeDir ".cache/dotfiles/vscode-extensions.pending") }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
 # =====================================================================
 
-marker="$HOME/.cache/dotfiles/vscode-extensions.failed"
-rm -f "$marker"
-command -v code >/dev/null 2>&1 || exit 0
+marker="$HOME/.cache/dotfiles/vscode-extensions.pending"
+if ! command -v code >/dev/null 2>&1; then
+    rm -f "$marker"
+    exit 0
+fi
+# Marca de "pendiente" mientras se trabaja: si algo falla o se interrumpe,
+# el proximo apply vuelve a ejecutar esto. Solo se quita si todo va bien.
+mkdir -p "${marker%/*}" && : > "$marker"
 
 installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
 failed=0
@@ -35,8 +40,6 @@ for ext in{{ range .packages.vscode.extensions }} {{ . | quote }}{{ end }}; do
     fi
 done
 
-if [ "$failed" = 1 ]; then
-    mkdir -p "${marker%/*}" && : > "$marker"
-fi
+[ "$failed" = 0 ] && rm -f "$marker"
 exit 0
 {{- end -}}

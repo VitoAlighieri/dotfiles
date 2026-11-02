@@ -1,27 +1,63 @@
 {{- if ne .chezmoi.os "windows" -}}
+{{- $codeDir := joinPath .chezmoi.homeDir ".config/Code" -}}
+{{- $userDir := joinPath $codeDir "User" -}}
+{{- $l1 := lstat $codeDir -}}
+{{- $l2 := lstat $userDir -}}
+{{- $symlinked := or (and $l1 (eq $l1.type "symlink")) (and $l2 (eq $l2.type "symlink")) -}}
+{{- $adopted := stat (joinPath $userDir ".dotfiles-adopted") -}}
+{{- if or $symlinked (not $adopted) -}}
 #!/bin/sh
 # =====================================================================
-# VS Code (Linux): copia de seguridad del settings.json que ya tuvieras
+# VS Code (Linux): antes de que chezmoi se haga cargo de settings.json
 # ---------------------------------------------------------------------
 # La primera vez que chezmoi gestiona ~/.config/Code/User/settings.json
 # lo sobrescribe SIN preguntar si ya habia uno tuyo. Antes de eso, este
-# script guarda tu version en settings.json.pre-dotfiles (una sola vez).
+# script:
+#   - guarda tu version en settings.json.pre-dotfiles;
+#   - si en este equipo se ha usado Settings Sync, para el apply y pide
+#     confirmacion (ver README): si la sincronizacion siguiera activa,
+#     subiria los settings compartidos a la nube y borraria tus otros
+#     ajustes en todas las maquinas sincronizadas;
+#   - si ~/.config/Code o ~/.config/Code/User es un enlace simbolico, para
+#     el apply: chezmoi lo cambiaria por una carpeta normal y VS Code
+#     dejaria de ver el resto de su configuracion.
+# Despues deja la marca ~/.config/Code/User/.dotfiles-adopted y este script
+# deja de generarse. Mientras tanto se reintenta en cada apply (linea
+# "pendiente").
 #
-# Si en este equipo se ha usado Settings Sync de VS Code, se para ANTES
-# de tocar nada y pide confirmacion (ver README): si la sincronizacion
-# siguiera activa, subiria los settings compartidos a la nube y borraria
-# tus otros ajustes en todas las maquinas sincronizadas.
-#
-# settings.json del repo: {{ include "dot_config/Code/User/settings.json" | sha256sum }}
+# pendiente: {{ now | date "2006-01-02T15:04:05.000000000" }}
 # =====================================================================
-dir="$HOME/.config/Code/User"
+code_dir="$HOME/.config/Code"
+dir="$code_dir/User"
 f="$dir/settings.json"
 src={{ joinPath .chezmoi.sourceDir "dot_config/Code/User/settings.json" | quote }}
 bak="$f.pre-dotfiles"
+mark="$dir/.dotfiles-adopted"
 
-[ -f "$f" ] || exit 0          # no habia settings.json previo
-[ -e "$bak" ] && exit 0        # la copia ya se hizo antes
-cmp -s "$f" "$src" && exit 0   # ya es igual que el del repo
+for d in "$code_dir" "$dir"; do
+    if [ -L "$d" ]; then
+        real=$(readlink -f "$d")
+        cat >&2 <<EOF
+[vscode] $d es un enlace simbolico (a $real).
+[vscode] chezmoi lo cambiaria por una carpeta normal con solo settings.json y VS Code
+[vscode] dejaria de ver el resto de su configuracion. Por eso se detiene este
+[vscode] 'chezmoi apply' (no se ha cambiado nada). Conviertelo en una carpeta normal
+[vscode] con el mismo contenido y vuelve a ejecutarlo:
+[vscode]   cp -a "$real" "$d.tmp" && rm "$d" && mv "$d.tmp" "$d"
+EOF
+        exit 1
+    fi
+done
+
+[ -e "$mark" ] && exit 0       # este equipo ya esta adoptado
+
+adopt() {
+    mkdir -p "$dir" && : > "$mark"
+    exit 0
+}
+
+[ -f "$f" ] || adopt           # no habia settings.json previo
+cmp -s "$f" "$src" && adopt    # ya es igual que el del repo
 
 if [ -d "$dir/sync" ] && [ "${DOTFILES_VSCODE_MIGRATE:-}" != 1 ]; then
     cat >&2 <<'EOF'
@@ -35,6 +71,12 @@ EOF
     exit 1
 fi
 
-cp -p "$f" "$bak" && echo "[vscode] Tu settings.json anterior se ha guardado en $bak"
-exit 0
+[ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"   # nunca pisar una copia anterior
+if ! cp -p "$f" "$bak"; then
+    echo "[vscode] No se pudo guardar una copia de tu settings.json en $bak; se detiene el apply para no perderlo." >&2
+    exit 1
+fi
+echo "[vscode] Tu settings.json anterior se ha guardado en $bak"
+adopt
+{{- end -}}
 {{- end -}}
