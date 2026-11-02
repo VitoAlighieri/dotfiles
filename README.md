@@ -143,21 +143,22 @@ El mismo tema en todo, en todas las máquinas:
 
 ## VS Code
 
-- **Settings comunes**: `dot_config/private_Code/User/settings.json` → tema Catppuccin
-  Macchiato, JetBrainsMono Nerd Font (editor y terminal) y las mismas
-  preferencias de edición que Neovim (tabs de 4 espacios sin autodetección,
-  números relativos, `scrolloff=8`, sin espacios finales…).
+- **Settings comunes**: `dot_config/private_Code/User/settings.json` (el mismo
+  que tenías en `dotfiles-ansible`) → tema Catppuccin Macchiato y sus iconos,
+  JetBrainsMono Nerd Font, modo Vim (VSCodeVim) y el menú **WhichKey** con
+  `<espacio>` (código, buscar, ir a, refactorizar, árbol de ficheros).
 - **Instalación**: solo en Windows (winget). No lo actualiza winget porque VS
   Code se actualiza solo. En Linux, si tienes VS Code (paquete oficial
   `.deb`/`.rpm`/snap), usa los mismos settings y extensiones; Flatpak, VSCodium
   y WSL leen de otras rutas y no se gestionan.
 - **Extensiones**: la lista está en `.chezmoidata/packages.yaml`
   (`vscode.extensions`). Los scripts `run_onchange_after_50-vscode-extensions`
-  instalan las que falten y reintentan solas si alguna falla (hay extras
-  comentados equivalentes a los LSP de Neovim). Solo actúan cuando VS Code ya
-  usa la config compartida en ese equipo (en Windows, una vez enlazado; en
-  Linux, una vez adoptado): mientras espera, o con el opt-out, no se instala
-  nada.
+  instalan las que falten y reintentan solas si alguna falla: Catppuccin
+  (tema e iconos), Vim, WhichKey y Fuzzy Search, que son las que usa
+  `settings.json` (hay extras comentados equivalentes a los LSP de Neovim).
+  Solo actúan cuando VS Code ya usa la config compartida en ese equipo (en
+  Windows, una vez enlazado; en Linux, una vez adoptado): mientras espera, o
+  con el opt-out, no se instala nada.
 
 ### Cómo se comparte en Windows
 

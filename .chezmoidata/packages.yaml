@@ -69,6 +69,9 @@ packages:
     extensions:
       - Catppuccin.catppuccin-vsc        # tema Catppuccin (Macchiato en settings.json)
       - Catppuccin.catppuccin-vsc-icons  # iconos Catppuccin
+      - vscodevim.vim                    # modo Vim (settings.json: vim.*)
+      - VSpaceCode.whichkey              # menu WhichKey en <espacio> (settings.json: whichkey.*)
+      - jacobdufault.fuzzy-search        # <espacio> f z: busqueda difusa en el fichero actual
 
       # --- Opcionales: descomenta lo que quieras ------------------------
       # Equivalentes a los LSP de tu Neovim:
@@ -83,4 +86,3 @@ packages:
       # - llvm-vs-code-extensions.vscode-clangd   # C/C++ (clangd)
       # Otras utiles:
       # - editorconfig.editorconfig               # respeta .editorconfig
-      # - vscodevim.vim                           # atajos de Vim
