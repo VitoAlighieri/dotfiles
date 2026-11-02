@@ -1,0 +1,36 @@
+{
+    // =====================================================================
+    // VS Code: settings COMPARTIDOS en todas las maquinas (Windows y Linux)
+    // ---------------------------------------------------------------------
+    // Gestionado con chezmoi: dot_config/Code/User/settings.json
+    //   - Linux:   VS Code lo lee de forma nativa (~/.config/Code/User).
+    //   - Windows: VS Code se redirige a ~/.config con VSCODE_APPDATA.
+    // Si cambias algo desde VS Code: `chezmoi re-add` + commit + push.
+    // =====================================================================
+
+    // --- Tema: Catppuccin Macchiato (igual que starship, bat, lsd, nvim...) ---
+    "workbench.colorTheme": "Catppuccin Macchiato",
+    "workbench.iconTheme": "catppuccin-macchiato",
+    // Recomendados por Catppuccin para que el tema se vea como debe:
+    "editor.semanticHighlighting.enabled": true,
+    "terminal.integrated.minimumContrastRatio": 1,
+    "window.titleBarStyle": "custom",
+
+    // --- Fuente: JetBrainsMono Nerd Font (la instalan estos dotfiles) ---
+    "editor.fontFamily": "'JetBrainsMono Nerd Font', Consolas, 'Courier New', monospace",
+    "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font'",
+
+    // --- Editor: las mismas preferencias que tu Neovim ---
+    "editor.tabSize": 4,                    // tabstop=4
+    "editor.insertSpaces": true,            // expandtab
+    "editor.lineNumbers": "relative",       // relativenumber
+    "editor.cursorSurroundingLines": 8,     // scrolloff=8
+    "files.trimTrailingWhitespace": true,   // borra espacios finales al guardar
+    "files.insertFinalNewline": true,
+
+    // --- Terminal integrada: PowerShell 7 en Windows (en Linux, tu shell) ---
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+    // --- Privacidad (como en tu config de lua_ls) ---
+    "telemetry.telemetryLevel": "off"
+}

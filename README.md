@@ -3,6 +3,7 @@
 Dotfiles de **Vito Alighieri** gestionados con [chezmoi](https://chezmoi.io).
 Multiplataforma: **una sola configuración compartida para todas las máquinas**
 (Windows y Linux). Solo PowerShell y Flow Launcher son exclusivos de Windows.
+VS Code se instala solo en Windows, pero sus settings son comunes a todos.
 
 ## Idea principal
 
@@ -20,8 +21,12 @@ SO** y, si lo cambias en uno y lo subes, se aplica igual en el resto.
 | bat          | `dot_config/bat/`                       | `~/.config/bat/`          | Todos     |
 | lsd          | `dot_config/lsd/`                       | `~/.config/lsd/`          | Todos     |
 | ripgrep      | `dot_config/ripgrep/config`             | `~/.config/ripgrep/config`| Todos     |
+| VS Code      | `dot_config/Code/User/settings.json`    | `~/.config/Code/User/`    | Todos (\*)|
 | PowerShell 7 | `dot_config/powershell/profile.ps1`     | `Documents\PowerShell\`   | Windows   |
 | Flow Launcher| `AppData/Roaming/FlowLauncher/Settings/`| `%APPDATA%\FlowLauncher\` | Windows   |
+
+(\*) VS Code solo se **instala** en Windows; en Linux, si lo instalas tú, usa
+los mismos settings y extensiones. Ver [VS Code](#vs-code).
 
 ### Cómo se comparten en Windows
 
@@ -35,9 +40,13 @@ profile):
 | `XDG_CONFIG_HOME`    | `~/.config`         | Neovim, fd, …   |
 | `BAT_CONFIG_DIR`     | `~/.config/bat`     | bat             |
 | `RIPGREP_CONFIG_PATH`| `~/.config/ripgrep/config` | ripgrep  |
+| `VSCODE_APPDATA`     | `~/.config`         | VS Code (usa `~/.config/Code`) |
 
 - **lsd** y **starship** ya leen de `~/.config` en Windows de forma nativa, no
   necesitan variable.
+- `VSCODE_APPDATA` la fija su propio script (`run_after_35-vscode-userdata`)
+  **después** de copiar tus datos de VS Code a la ruta nueva (ver
+  [VS Code](#vs-code)).
 - En **Linux** todo es nativo. Solo ripgrep necesita una línea en tu shell:
   `export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"`.
 
@@ -81,9 +90,11 @@ máquina a otra:
    chezmoi update        # hace git pull + apply
    ```
 
-Esto vale para todo lo compartido (bat, lsd, nvim, ripgrep, starship) y también
-para Flow Launcher (que se gestiona como archivo normal: `apply` impone la
-versión del repo, así que acuérdate de `re-add` cuando cambies sus ajustes).
+Esto vale para todo lo compartido (bat, lsd, nvim, ripgrep, starship, VS Code)
+y también para Flow Launcher. VS Code y Flow Launcher escriben sus propios
+ajustes, y `apply` impone la versión del repo, así que acuérdate de hacer
+`re-add` cuando cambies algo desde su interfaz (`chezmoi diff` te enseña qué
+ha cambiado).
 
 ## Preinstalación automática (winget)
 
@@ -93,9 +104,9 @@ si hay **versión más nueva** → `winget upgrade`. El script se reejecuta al
 editar la lista y, además, una vez al día.
 
 Por defecto asegura **Neovim, Starship, lsd, bat, fd, ripgrep, tldr, coreutils
-(comandos Unix nativos), Git, PowerShell 7, Flow Launcher** y la **Nerd Font
-JetBrainsMono**. Hay extras comentados (delta, toolchains de LSP…) listos para
-activar.
+(comandos Unix nativos), Git, PowerShell 7, Flow Launcher, VS Code** y la
+**Nerd Font JetBrainsMono**. Hay extras comentados (delta, toolchains de LSP…)
+listos para activar.
 
 Para añadir un programa, añade su Id de winget (búscalo con
 `winget search <nombre>`) y ejecuta `chezmoi apply`.
@@ -110,6 +121,36 @@ El mismo tema en todo, en todas las máquinas:
   (script `run_onchange_after_40-bat-cache`), también en máquinas nuevas.
 - **Flow Launcher**: el tema `Catppuccin Macchiato.xaml` se despliega en
   `%APPDATA%\FlowLauncher\Themes\` y queda activado en su `Settings.json`.
+- **VS Code**: `settings.json` activa *Catppuccin Macchiato* y sus iconos; las
+  extensiones del tema se instalan solas (ver [VS Code](#vs-code)).
+
+## VS Code
+
+- **Settings comunes**: `dot_config/Code/User/settings.json` → tema Catppuccin
+  Macchiato, JetBrainsMono Nerd Font (editor y terminal) y las mismas
+  preferencias de edición que Neovim (tabs de 4 espacios, números relativos,
+  `scrolloff=8`, sin espacios finales…).
+- **Instalación**: solo en Windows (winget). En Linux, si tienes VS Code, coge
+  los mismos settings y extensiones.
+- **Extensiones**: la lista está en `.chezmoidata/packages.yaml`
+  (`vscode.extensions`). Los scripts `run_onchange_after_50-vscode-extensions`
+  instalan las que falten (hay extras comentados equivalentes a los LSP de
+  Neovim).
+- **Primera vez en un Windows donde ya usabas VS Code**: el script
+  `run_after_35-vscode-userdata` copia tus datos de `%APPDATA%\Code` a
+  `~/.config/Code` (sesiones, estado de extensiones, inicios de sesión,
+  historial…) **sin tocar el original**, y solo entonces fija `VSCODE_APPDATA`.
+  Si VS Code está abierto no hace nada: ciérralo y vuelve a ejecutar
+  `chezmoi apply`. Después, **reinicia VS Code y las terminales**. Tus settings
+  anteriores siguen en `%APPDATA%\Code\User\settings.json` por si quieres
+  recuperar algo.
+- **Atajos y snippets**: no se gestionan por defecto (así la migración conserva
+  los tuyos). Para sincronizarlos también:
+  ```sh
+  chezmoi add ~/.config/Code/User/keybindings.json ~/.config/Code/User/snippets
+  ```
+- **Settings Sync** de VS Code: si lo usas, desactívalo (al menos para
+  *Settings*) para que no se pelee con chezmoi.
 
 ## Notas
 
@@ -117,7 +158,8 @@ El mismo tema en todo, en todas las máquinas:
   Tus alias (`ls`→lsd, `cat`→bat, `grep`→rg, `find`→fd) y los de PowerShell
   (`cp`, `mv`, `rm`, `pwd`…) tienen prioridad; para forzar la versión coreutils
   llámala con `.exe` (p. ej. `cp.exe`). Requiere PowerShell 7.4+.
-- **Nerd Font**: recuerda seleccionarla en los ajustes de tu terminal.
+- **Nerd Font**: recuerda seleccionarla en los ajustes de tu terminal (VS Code
+  ya la usa automáticamente).
 
 ## Estructura
 
@@ -126,7 +168,7 @@ El mismo tema en todo, en todas las máquinas:
 .chezmoiignore.tmpl   Qué NO desplegar (por SO)
 .chezmoiremove        Limpieza de rutas antiguas (Windows)
 .chezmoidata/         Datos para plantillas (lista de paquetes)
-.chezmoiscripts/      Scripts (winget, variables de entorno, profile)
+.chezmoiscripts/      Scripts (winget, variables de entorno, profile, bat, VS Code)
 dot_config/           -> ~/.config  (común a todos los SO)
 AppData/              -> ~/AppData  (solo Windows: Flow Launcher)
 ```

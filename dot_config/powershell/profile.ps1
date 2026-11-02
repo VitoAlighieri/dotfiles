@@ -9,6 +9,13 @@ $env:XDG_CONFIG_HOME     = $XdgConfig                       # nvim, fd, ...
 $env:BAT_CONFIG_DIR      = Join-Path $XdgConfig 'bat'       # bat
 $env:RIPGREP_CONFIG_PATH = Join-Path $XdgConfig 'ripgrep\config'  # ripgrep
 
+# VS Code: VSCODE_APPDATA la fija el script run_after_35-vscode-userdata
+# DESPUES de copiar sus datos a ~/.config/Code. Aqui no se fuerza: solo se
+# refleja en la sesion si ya existe (asi nunca se usa la ruta nueva antes
+# de migrar, y las terminales nuevas la ven aunque la ventana ya estuviera abierta).
+$vscodeAppData = [Environment]::GetEnvironmentVariable('VSCODE_APPDATA', 'User')
+if ($vscodeAppData) { $env:VSCODE_APPDATA = $vscodeAppData }
+
 # Init Starship Prompt (solo si esta instalado)
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
