@@ -3,6 +3,7 @@
 Dotfiles de **Vito Alighieri** gestionados con [chezmoi](https://chezmoi.io).
 Multiplataforma: **una sola configuración compartida para todas las máquinas**
 (Windows y Linux). Solo PowerShell y Flow Launcher son exclusivos de Windows.
+VS Code se instala solo en Windows, pero sus settings son comunes a todos.
 
 ## Idea principal
 
@@ -20,8 +21,12 @@ SO** y, si lo cambias en uno y lo subes, se aplica igual en el resto.
 | bat          | `dot_config/bat/`                       | `~/.config/bat/`          | Todos     |
 | lsd          | `dot_config/lsd/`                       | `~/.config/lsd/`          | Todos     |
 | ripgrep      | `dot_config/ripgrep/config`             | `~/.config/ripgrep/config`| Todos     |
+| VS Code      | `dot_config/private_Code/User/settings.json` | `~/.config/Code/User/` | Todos (\*)|
 | PowerShell 7 | `dot_config/powershell/profile.ps1`     | `Documents\PowerShell\`   | Windows   |
 | Flow Launcher| `AppData/Roaming/FlowLauncher/Settings/`| `%APPDATA%\FlowLauncher\` | Windows   |
+
+(\*) VS Code solo se **instala** en Windows; en Linux, si lo instalas tú, usa
+los mismos settings y extensiones. Ver [VS Code](#vs-code).
 
 ### Cómo se comparten en Windows
 
@@ -38,32 +43,53 @@ profile):
 
 - **lsd** y **starship** ya leen de `~/.config` en Windows de forma nativa, no
   necesitan variable.
+- **VS Code** no usa variable: su carpeta `%APPDATA%\Code\User` se convierte en
+  un enlace (*junction*) a `~/.config/Code/User`, así funciona igual se abra
+  desde donde se abra (ver [VS Code](#vs-code)).
 - En **Linux** todo es nativo. Solo ripgrep necesita una línea en tu shell:
   `export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"`.
 
-> Tras el primer `apply` en Windows, **reinicia la terminal** (y apps como VS
-> Code) para que tomen las variables nuevas.
+> Tras el primer `apply` en Windows, lo más fiable es **cerrar sesión y volver
+> a entrar**: los programas que ya estaban abiertos (terminales, Flow
+> Launcher…) siguen con las variables de entorno antiguas.
 
 ## Instalación en un equipo nuevo
 
-1. Instala chezmoi:
+**Windows** (PowerShell):
 
-   ```powershell
-   winget install --id twpayne.chezmoi      # Windows
-   ```
-   ```bash
-   sh -c "$(curl -fsLS get.chezmoi.io)"      # Linux
-   ```
+```powershell
+winget install --id twpayne.chezmoi
+# abre una terminal NUEVA (para que encuentre chezmoi) y:
+chezmoi init --apply VitoAlighieri
+```
 
-2. Inicializa y aplica en un solo paso:
+**Linux** (instala chezmoi en `~/.local/bin` y aplica en un solo paso):
 
-   ```sh
-   chezmoi init --apply VitoAlighieri
-   ```
+```bash
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin" init --apply VitoAlighieri
+```
+
+Para los siguientes comandos `chezmoi`, `~/.local/bin` tiene que estar en el
+PATH: en Ubuntu/Debian basta con cerrar sesión y volver a entrar; en otras
+distros añade `export PATH="$HOME/.local/bin:$PATH"` a tu `~/.bashrc` o
+`~/.zshrc`.
 
 Al aplicar (en Windows), chezmoi: **preinstala los programas** con winget,
-copia las configs a `~/.config`, fija las variables de entorno y despliega el
-`profile.ps1` en la ruta real de PowerShell 7.
+copia las configs a `~/.config`, fija las variables de entorno, prepara VS Code
+y despliega el `profile.ps1` en la ruta real de PowerShell 7. Los scripts se
+ejecutan con Windows PowerShell 5.1 y `-ExecutionPolicy Bypass` (configurado en
+`.chezmoi.toml.tmpl`), así que funcionan aunque el Windows sea recién instalado.
+
+### Actualizar un equipo que ya usa estos dotfiles
+
+```sh
+chezmoi git pull      # trae los cambios del repo
+chezmoi init          # solo si cambió .chezmoi.toml.tmpl (chezmoi te avisa)
+chezmoi diff          # revisa qué va a cambiar
+chezmoi apply
+```
+
+(`chezmoi update` hace `git pull` + `apply` de una vez.)
 
 ## Sincronizar cambios entre máquinas
 
@@ -81,9 +107,11 @@ máquina a otra:
    chezmoi update        # hace git pull + apply
    ```
 
-Esto vale para todo lo compartido (bat, lsd, nvim, ripgrep, starship) y también
-para Flow Launcher (que se gestiona como archivo normal: `apply` impone la
-versión del repo, así que acuérdate de `re-add` cuando cambies sus ajustes).
+Esto vale para todo lo compartido (bat, lsd, nvim, ripgrep, starship, VS Code)
+y también para Flow Launcher. VS Code y Flow Launcher escriben sus propios
+ajustes, y `apply` impone la versión del repo, así que acuérdate de hacer
+`re-add` cuando cambies algo desde su interfaz (`chezmoi diff` te enseña qué
+ha cambiado).
 
 ## Preinstalación automática (winget)
 
@@ -93,9 +121,9 @@ si hay **versión más nueva** → `winget upgrade`. El script se reejecuta al
 editar la lista y, además, una vez al día.
 
 Por defecto asegura **Neovim, Starship, lsd, bat, fd, ripgrep, tldr, coreutils
-(comandos Unix nativos), Git, PowerShell 7, Flow Launcher** y la **Nerd Font
-JetBrainsMono**. Hay extras comentados (delta, toolchains de LSP…) listos para
-activar.
+(comandos Unix nativos), Git, PowerShell 7, Flow Launcher, VS Code** y la
+**Nerd Font JetBrainsMono**. Hay extras comentados (delta, toolchains de LSP…)
+listos para activar.
 
 Para añadir un programa, añade su Id de winget (búscalo con
 `winget search <nombre>`) y ejecuta `chezmoi apply`.
@@ -110,6 +138,160 @@ El mismo tema en todo, en todas las máquinas:
   (script `run_onchange_after_40-bat-cache`), también en máquinas nuevas.
 - **Flow Launcher**: el tema `Catppuccin Macchiato.xaml` se despliega en
   `%APPDATA%\FlowLauncher\Themes\` y queda activado en su `Settings.json`.
+- **VS Code**: `settings.json` activa *Catppuccin Macchiato* y sus iconos; las
+  extensiones del tema se instalan solas (ver [VS Code](#vs-code)).
+
+## VS Code
+
+- **Settings comunes**: `dot_config/private_Code/User/settings.json` → tema Catppuccin
+  Macchiato, JetBrainsMono Nerd Font (editor y terminal) y las mismas
+  preferencias de edición que Neovim (tabs de 4 espacios sin autodetección,
+  números relativos, `scrolloff=8`, sin espacios finales…).
+- **Instalación**: solo en Windows (winget). No lo actualiza winget porque VS
+  Code se actualiza solo. En Linux, si tienes VS Code (paquete oficial
+  `.deb`/`.rpm`/snap), usa los mismos settings y extensiones; Flatpak, VSCodium
+  y WSL leen de otras rutas y no se gestionan.
+- **Extensiones**: la lista está en `.chezmoidata/packages.yaml`
+  (`vscode.extensions`). Los scripts `run_onchange_after_50-vscode-extensions`
+  instalan las que falten y reintentan solas si alguna falla (hay extras
+  comentados equivalentes a los LSP de Neovim). Solo actúan cuando VS Code ya
+  usa la config compartida en ese equipo (en Windows, una vez enlazado; en
+  Linux, una vez adoptado): mientras espera, o con el opt-out, no se instala
+  nada.
+
+### Cómo se comparte en Windows
+
+El script `run_onchange_before_20-vscode-userdir` convierte
+`%APPDATA%\Code\User` en una *junction* (enlace de carpeta, no necesita permisos
+de administrador) que apunta a `~/.config/Code/User`. VS Code sigue usando su
+ruta de siempre, pero los settings son los compartidos, se abra desde donde se
+abra.
+
+**Primera vez en un Windows donde ya usabas VS Code:**
+
+1. **Cierra VS Code** y lanza el `apply` desde una terminal que no sea la de
+   VS Code. Si está abierto, el script no hace nada y se reintenta en el
+   siguiente `chezmoi apply`.
+2. Se **copia** tu carpeta de usuario (atajos, snippets, estado de extensiones,
+   sesiones, historial…) a `~/.config/Code/User`. El original se conserva entero
+   como copia de seguridad en `%APPDATA%\Code\User.pre-dotfiles-<fecha>`
+   (incluido tu `settings.json` anterior). Puedes borrarla cuando compruebes que
+   todo va bien (es la que recupera *Deshacerlo*, más abajo). Si algo falla a
+   mitad, se deshace solo; y si no pudiera dejarlo todo como estaba, te dice
+   dónde está tu copia y no sigue hasta que la recuperes o la apartes.
+3. **Settings Sync**: si alguna vez usaste la sincronización de VS Code, el
+   script se para y te avisa. Si siguiera activa, subiría los settings
+   compartidos a la nube y **borraría tus otros ajustes en todas las máquinas
+   sincronizadas**. Desactívala (Ctrl+Shift+P → `Settings Sync: Turn Off`),
+   cierra VS Code y confirma con (en una línea):
+   ```powershell
+   $env:DOTFILES_VSCODE_MIGRATE='sync-off'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null
+   ```
+   Si después quieres seguir usando Settings Sync para otras cosas
+   (extensiones, atajos…), al volver a activarla (Ctrl+Shift+P →
+   `Settings Sync: Backup and Sync Settings...`) **desmarca Settings en la lista
+   que aparece antes de iniciar sesión**: nada más iniciar sesión sincroniza, y
+   desmarcarlo después ya llega tarde. Si te sale un conflicto en *Settings*, es
+   que seguía marcado: cancela y empieza de nuevo (nunca *Accept Local*).
+4. Si dentro de tu carpeta de usuario hay **enlaces** (por ejemplo, una carpeta
+   de snippets enlazada a otro sitio), la copia no los incluye: el script te
+   los enseña y espera a que lo confirmes con
+   `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null`.
+5. Si usas **perfiles** de VS Code, los settings compartidos solo se aplican al
+   perfil *Default*.
+
+Si en algún equipo prefieres que VS Code **no** se enlace (por ejemplo, para
+seguir con Settings Sync allí), crea este fichero y el script no volverá a
+tocarlo (en un equipo nuevo, hazlo antes del `chezmoi init --apply`):
+
+```powershell
+New-Item -ItemType File -Force "$env:APPDATA\Code\.dotfiles-no-junction"
+```
+
+**Deshacerlo** (con VS Code cerrado, en PowerShell):
+
+```powershell
+[IO.Directory]::Delete("$env:APPDATA\Code\User")    # borra solo el enlace, no los datos
+Rename-Item "$env:APPDATA\Code\User.pre-dotfiles-<fecha>" User
+New-Item -ItemType File -Force "$env:APPDATA\Code\.dotfiles-no-junction"   # que chezmoi no lo vuelva a enlazar
+```
+
+Si no tienes copia `User.pre-dotfiles-*` (en un equipo instalado desde cero no
+se crea, o ya la borraste), en lugar del `Rename-Item` copia tu configuración
+actual; si no, VS Code arrancará vacío:
+
+```powershell
+robocopy "$HOME\.config\Code\User" "$env:APPDATA\Code\User" /E /XF .dotfiles-junction
+```
+
+Lo que cambiaste mientras estaba enlazado sigue en `~/.config/Code/User`. Para
+volver a enlazarlo, borra `.dotfiles-no-junction` y, con VS Code cerrado,
+ejecuta `$env:DOTFILES_VSCODE_MIGRATE='1'; chezmoi apply; $env:DOTFILES_VSCODE_MIGRATE=$null`
+(lo que hubiera en `~/.config/Code/User` se guarda aparte, en
+`~/.config/Code/User.prev-<fecha>`). Si en ese equipo volviste a usar Settings
+Sync, el script te pedirá antes desactivarla, como en el paso 3.
+
+### En Linux
+
+La primera vez que chezmoi gestiona `~/.config/Code/User/settings.json` lo
+sobrescribe sin preguntar. Por eso, si ya tenías uno, antes se guarda en
+`settings.json.pre-dotfiles` (script `run_onchange_before_05-vscode-settings-backup`).
+Hecho eso, el script deja la marca `~/.config/Code/User/.dotfiles-adopted` y no
+vuelve a intervenir. Esa copia solo se hace en un `chezmoi apply` completo (no
+con `chezmoi apply <ruta>`), así que la primera vez usa el `apply` normal.
+
+En estos casos chezmoi **no toca VS Code** en ese equipo (ningún comando, ni
+`apply <ruta>` ni `edit --apply`), te avisa en cada `apply` y el resto de los
+dotfiles se aplica igual (lo decide `.chezmoitemplates/vscode-linux-state`):
+
+- Si has usado **Settings Sync** (existe `~/.config/Code/User/sync`), por el
+  mismo motivo que en Windows. Desactívala (Ctrl+Shift+P →
+  `Settings Sync: Turn Off`) y confirma con:
+  ```sh
+  DOTFILES_VSCODE_MIGRATE=sync-off chezmoi apply
+  ```
+- Si `~/.config/Code` o `~/.config/Code/User` es un **enlace simbólico** (por
+  ejemplo, a Dropbox): chezmoi lo cambiaría por una carpeta normal y VS Code
+  dejaría de ver el resto de su configuración. El aviso te da el comando para
+  convertirlo en una carpeta normal con el mismo contenido (con VS Code
+  cerrado).
+- Si prefieres que chezmoi no toque VS Code en ese equipo (en uno nuevo,
+  antes del primer `apply`):
+  ```sh
+  mkdir -p ~/.config/Code && touch ~/.config/Code/.dotfiles-no-manage
+  ```
+  Bórralo para volver a gestionarlo.
+
+### Atajos y snippets
+
+No se gestionan por defecto (así la migración conserva los tuyos). Para
+sincronizarlos también, hazlo desde la máquina que tenga los buenos, con VS
+Code cerrado:
+
+```sh
+cd ~/.config/Code/User
+chezmoi add snippets
+chezmoi add keybindings.json        # solo si existe: VS Code no lo crea hasta que cambias algún atajo
+chezmoi managed --include=symlinks  # no debe salir nada de .config/Code
+```
+
+Ojo con los **enlaces simbólicos** (Linux): chezmoi guarda un enlace como
+enlace, y en las demás máquinas **borraría** su carpeta de snippets entera para
+poner el enlace. Antes de añadirlos, mira que `ls -ld snippets keybindings.json`
+no muestre `->`; si lo muestra, conviértelos primero en carpeta/fichero normal:
+
+```sh
+cp -aT "$(readlink -f snippets)" snippets.tmp && rm snippets && mv -T snippets.tmp snippets
+cp --remove-destination "$(readlink -f keybindings.json)" keybindings.json
+```
+
+Si `chezmoi managed --include=symlinks` lista alguno, quítalo del repo con
+`chezmoi forget <ruta>` antes de subir nada, conviértelo y vuelve a añadirlo.
+
+Después, el primer `apply` en cada otra máquina sustituirá su
+`keybindings.json` y los snippets que se llamen igual. El resto de
+`~/.config/Code` (sesiones, cachés, tokens…) es estado de cada equipo:
+`.chezmoiignore` impide que acabe en el repo.
 
 ## Notas
 
@@ -117,7 +299,11 @@ El mismo tema en todo, en todas las máquinas:
   Tus alias (`ls`→lsd, `cat`→bat, `grep`→rg, `find`→fd) y los de PowerShell
   (`cp`, `mv`, `rm`, `pwd`…) tienen prioridad; para forzar la versión coreutils
   llámala con `.exe` (p. ej. `cp.exe`). Requiere PowerShell 7.4+.
-- **Nerd Font**: recuerda seleccionarla en los ajustes de tu terminal.
+- **Nerd Font**: en Windows se instala sola (JetBrainsMono); recuerda
+  seleccionarla en los ajustes de tu terminal (VS Code ya la usa). En Linux
+  instálala tú, por ejemplo descomprimiendo `JetBrainsMono.zip` de
+  [nerd-fonts](https://github.com/ryanoasis/nerd-fonts/releases) en
+  `~/.local/share/fonts` y ejecutando `fc-cache -f`.
 
 ## Estructura
 
@@ -126,7 +312,8 @@ El mismo tema en todo, en todas las máquinas:
 .chezmoiignore.tmpl   Qué NO desplegar (por SO)
 .chezmoiremove        Limpieza de rutas antiguas (Windows)
 .chezmoidata/         Datos para plantillas (lista de paquetes)
-.chezmoiscripts/      Scripts (winget, variables de entorno, profile)
+.chezmoitemplates/    Plantillas compartidas (estado de VS Code en Linux)
+.chezmoiscripts/      Scripts (winget, variables de entorno, profile, bat, VS Code)
 dot_config/           -> ~/.config  (común a todos los SO)
 AppData/              -> ~/AppData  (solo Windows: Flow Launcher)
 ```

@@ -1,0 +1,102 @@
+{{- if eq .chezmoi.os "windows" -}}
+{{- /* Solo cuando VS Code ya usa la config compartida (enlace hecho, ver before_20). */ -}}
+{{- $userDir := joinPath (env "APPDATA") "Code" "User" -}}
+{{- $l := lstat $userDir -}}
+{{- if and $l (not $l.isDir) (stat (joinPath $userDir ".dotfiles-junction")) -}}
+{{- $code := or (lookPath "code") (stat (joinPath (env "LOCALAPPDATA") "Programs" "Microsoft VS Code" "bin" "code.cmd")) (stat (joinPath (env "ProgramFiles") "Microsoft VS Code" "bin" "code.cmd")) -}}
+{{- $pending := joinPath (env "LOCALAPPDATA") "dotfiles" "vscode-extensions.pending" -}}
+# =====================================================================
+# Extensiones de VS Code (Windows)
+# ---------------------------------------------------------------------
+# Instala las extensiones de .chezmoidata/packages.yaml (vscode.extensions)
+# que falten, p. ej. el tema Catppuccin que activa settings.json.
+# Se reejecuta cuando cambia la lista, cuando aparece VS Code y, si alguna
+# instalacion falla o se interrumpe (sin red, Marketplace caido...), en
+# cada `chezmoi apply` hasta que funcione (lineas de abajo).
+# Solo se genera cuando %APPDATA%\Code\User ya esta enlazado a la config
+# compartida (o sea, no mientras la migracion espera, ni con el opt-out).
+#
+# VS Code detectado al generar este script: {{ if $code }}si{{ else }}no{{ end }}
+# reintento pendiente: {{ if stat $pending }}{{ now | date "20060102T150405.000000000" }}{{ else }}no{{ end }}
+# =====================================================================
+
+$extensions = @(
+{{- range .packages.vscode.extensions }}
+    '{{ . }}'
+{{- end }}
+)
+
+# Marca de "pendiente": mientras exista, el proximo apply vuelve a ejecutar
+# esto. Se pone al empezar y solo se quita si todo va bien, asi un fallo o
+# una interrupcion (Ctrl+C, cerrar la terminal) se reintentan solos.
+$pendingMarker = Join-Path $env:LOCALAPPDATA 'dotfiles\vscode-extensions.pending'
+
+# winget puede haber instalado VS Code en este MISMO apply, pero chezmoi
+# arranco con el PATH antiguo: lo recargamos del registro (sin duplicados).
+$seen = @{}
+$parts = foreach ($p in ((@(
+            [Environment]::GetEnvironmentVariable('Path', 'Machine'),
+            [Environment]::GetEnvironmentVariable('Path', 'User'),
+            $env:Path
+        ) -join ';') -split ';')) {
+    $q = [Environment]::ExpandEnvironmentVariables($p.Trim())
+    if ($q -and -not $seen.ContainsKey($q.ToLowerInvariant())) {
+        $seen[$q.ToLowerInvariant()] = $true
+        $q
+    }
+}
+$env:Path = $parts -join ';'
+
+$code = $null
+$cmd = Get-Command 'code.cmd' -ErrorAction SilentlyContinue
+if ($cmd) { $code = $cmd.Source }
+if (-not $code) {
+    $candidates = @(
+        (Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\bin\code.cmd'),
+        (Join-Path $env:ProgramFiles 'Microsoft VS Code\bin\code.cmd')
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            $code = $candidate
+            break
+        }
+    }
+}
+if (-not $code) {
+    Remove-Item -LiteralPath $pendingMarker -Force -ErrorAction SilentlyContinue
+    Write-Host "[vscode] VS Code no esta instalado todavia; se omiten las extensiones." -ForegroundColor DarkGray
+    exit 0
+}
+try {
+    New-Item -ItemType Directory -Path (Split-Path $pendingMarker -Parent) -Force -ErrorAction Stop | Out-Null
+    Set-Content -LiteralPath $pendingMarker -Value (Get-Date -Format 'o') -Encoding ASCII -ErrorAction Stop
+} catch {
+    Write-Warning ("  No se pudo crear la marca de reintento ({0}): {1}" -f $pendingMarker, $_.Exception.Message)
+}
+
+Write-Host "==> Asegurando extensiones de VS Code..." -ForegroundColor Cyan
+$installed = @(& $code --list-extensions 2>$null) | ForEach-Object { $_.Trim().ToLowerInvariant() }
+$anyFailed = $false
+
+foreach ($ext in $extensions) {
+    if ([string]::IsNullOrWhiteSpace($ext)) { continue }
+    if ($installed -contains $ext.ToLowerInvariant()) {
+        Write-Host ("  [=] {0} ya instalada" -f $ext) -ForegroundColor DarkGray
+        continue
+    }
+    Write-Host ("  [+] Instalando {0} ..." -f $ext) -ForegroundColor Yellow
+    & $code --install-extension $ext 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host ("  [OK] {0}" -f $ext) -ForegroundColor Green
+    } else {
+        $anyFailed = $true
+        Write-Warning ("  No se pudo instalar {0}; se reintentara en el proximo 'chezmoi apply' (a mano: code --install-extension {0})" -f $ext)
+    }
+}
+
+if (-not $anyFailed) {
+    Remove-Item -LiteralPath $pendingMarker -Force -ErrorAction SilentlyContinue
+}
+exit 0
+{{- end -}}
+{{- end -}}

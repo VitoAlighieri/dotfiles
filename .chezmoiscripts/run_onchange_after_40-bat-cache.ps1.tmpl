@@ -4,14 +4,37 @@
 # ---------------------------------------------------------------------
 # bat necesita `bat cache --build` para reconocer temas custom. Esto lo
 # hace automaticamente, asi el tema se aplica tambien en maquinas nuevas.
-# Se reejecuta cuando cambia el tema (hash abajo).
+# Se reejecuta cuando cambia el tema y cuando bat pasa a estar en el PATH
+# (lineas de abajo), por si en el primer apply aun no estaba disponible.
 #
 # theme hash: {{ include "dot_config/bat/themes/Catppuccin Macchiato.tmTheme" | sha256sum }}
+# bat en el PATH al generar este script: {{ if lookPath "bat" }}si{{ else }}no{{ end }}
 # =====================================================================
+
+# En una maquina nueva winget instala bat en este MISMO apply, pero chezmoi
+# arranco con el PATH antiguo: lo recargamos del registro (+ enlaces de
+# winget), sin duplicados.
+$seen = @{}
+$parts = foreach ($p in ((@(
+            [Environment]::GetEnvironmentVariable('Path', 'Machine'),
+            [Environment]::GetEnvironmentVariable('Path', 'User'),
+            (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'),
+            $env:Path
+        ) -join ';') -split ';')) {
+    $q = [Environment]::ExpandEnvironmentVariables($p.Trim())
+    if ($q -and -not $seen.ContainsKey($q.ToLowerInvariant())) {
+        $seen[$q.ToLowerInvariant()] = $true
+        $q
+    }
+}
+$env:Path = $parts -join ';'
+
 if (Get-Command bat -ErrorAction SilentlyContinue) {
     $env:BAT_CONFIG_DIR = Join-Path $HOME '.config\bat'
     bat cache --build *> $null
     Write-Host "[bat] cache reconstruida (tema Catppuccin registrado)" -ForegroundColor Green
+} else {
+    Write-Host "[bat] bat aun no esta disponible; el tema se registrara en un proximo apply." -ForegroundColor DarkGray
 }
 exit 0
 {{- end }}

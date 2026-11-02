@@ -1,0 +1,79 @@
+{{- if ne .chezmoi.os "windows" -}}
+{{- $state := includeTemplate "vscode-linux-state" . | trim -}}
+{{- if and (ne $state "adopted") (ne $state "optout") -}}
+#!/bin/sh
+# =====================================================================
+# VS Code (Linux): antes de que chezmoi se haga cargo de settings.json
+# ---------------------------------------------------------------------
+# La primera vez que chezmoi gestiona ~/.config/Code/User/settings.json
+# lo sobrescribe SIN preguntar si ya habia uno tuyo. Antes de eso, este
+# script guarda tu version en settings.json.pre-dotfiles y deja la marca
+# ~/.config/Code/User/.dotfiles-adopted; despues deja de generarse.
+#
+# Mientras tanto, .chezmoiignore.tmpl aparta VS Code entero (y este script
+# solo avisa, el resto del apply sigue) si:
+#   - ~/.config/Code o ~/.config/Code/User es un enlace simbolico: chezmoi
+#     lo cambiaria por una carpeta normal y VS Code dejaria de ver el resto
+#     de su configuracion;
+#   - se ha usado Settings Sync: si siguiera activa, subiria a la nube los
+#     settings (y atajos y snippets) compartidos y borraria tus otros
+#     ajustes en todas las maquinas sincronizadas.
+# Para que chezmoi no toque VS Code en este equipo:
+#     mkdir -p ~/.config/Code && touch ~/.config/Code/.dotfiles-no-manage
+#
+# estado: {{ $state }} (ver .chezmoitemplates/vscode-linux-state)
+# pendiente: {{ now | date "2006-01-02T15:04:05.000000000" }}
+# =====================================================================
+{{- if eq $state "linked" }}
+code_dir="$HOME/.config/Code"
+
+for d in "$code_dir" "$code_dir/User"; do
+    [ -L "$d" ] || continue
+    if [ ! -e "$d" ]; then
+        echo "[vscode] $d es un enlace simbolico roto (a '$(readlink "$d")'), asi que chezmoi no toca VS Code." >&2
+        echo "[vscode] Restaura o monta su destino, o borra el enlace con:  rm \"$d\"" >&2
+        exit 0
+    fi
+    real=$(readlink -f "$d")
+    cat >&2 <<EOF
+[vscode] $d es un enlace simbolico (a $real), asi que chezmoi no toca VS Code:
+[vscode] lo cambiaria por una carpeta normal y VS Code dejaria de ver el resto de su configuracion.
+[vscode] Para usar los settings compartidos, conviertelo en una carpeta normal con el mismo
+[vscode] contenido (con VS Code cerrado) y vuelve a ejecutar 'chezmoi apply':
+[vscode]   cp -aT "$real" "$d.tmp" && rm "$d" && mv -T "$d.tmp" "$d"
+[vscode] Para dejarlo asi y no ver mas este aviso:  touch "$code_dir/.dotfiles-no-manage"
+EOF
+    exit 0
+done
+exit 0
+{{- else if eq $state "sync" }}
+
+cat >&2 <<'EOF'
+[vscode] En este equipo se ha usado la sincronizacion de VS Code (Settings Sync). Si siguiera
+[vscode] activa, al pasar a los settings compartidos los subiria a la nube y BORRARIA tus otros
+[vscode] ajustes en todas las maquinas sincronizadas. Por eso chezmoi aun no toca VS Code (el
+[vscode] resto de los dotfiles si se aplica):
+[vscode]   1) En VS Code: Ctrl+Shift+P > 'Settings Sync: Turn Off'
+[vscode]   2) Ejecuta:  DOTFILES_VSCODE_MIGRATE=sync-off chezmoi apply
+[vscode] Para que chezmoi no toque VS Code en este equipo:  touch ~/.config/Code/.dotfiles-no-manage
+EOF
+exit 0
+{{- else }}
+dir="$HOME/.config/Code/User"
+f="$dir/settings.json"
+src={{ joinPath .chezmoi.sourceDir "dot_config/private_Code/User/settings.json" | quote }}
+bak="$f.pre-dotfiles"
+
+if [ -f "$f" ] && ! cmp -s "$f" "$src"; then
+    [ -e "$bak" ] && bak="$bak-$(date +%Y%m%d-%H%M%S)"   # nunca pisar una copia anterior
+    if ! cp -p "$f" "$bak"; then
+        echo "[vscode] No se pudo guardar una copia de tu settings.json en $bak; se detiene el apply para no perderlo." >&2
+        exit 1
+    fi
+    echo "[vscode] Tu settings.json anterior se ha guardado en $bak"
+fi
+mkdir -p "$dir" && : > "$dir/.dotfiles-adopted"
+exit 0
+{{- end }}
+{{- end -}}
+{{- end -}}

@@ -5,9 +5,11 @@
 # ---------------------------------------------------------------------
 # bat necesita `bat cache --build` para reconocer temas custom. Esto lo
 # hace automaticamente, asi el tema se aplica tambien en maquinas nuevas.
-# Se reejecuta cuando cambia el tema (hash abajo).
+# Se reejecuta cuando cambia el tema y cuando bat pasa a estar en el PATH
+# (lineas de abajo), por si en el primer apply aun no estaba instalado.
 #
 # theme hash: {{ include "dot_config/bat/themes/Catppuccin Macchiato.tmTheme" | sha256sum }}
+# bat en el PATH al generar este script: {{ if or (lookPath "bat") (lookPath "batcat") }}si{{ else }}no{{ end }}
 # =====================================================================
 export BAT_CONFIG_DIR="$HOME/.config/bat"
 if command -v bat >/dev/null 2>&1; then

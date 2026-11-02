@@ -1,0 +1,29 @@
+{{- /*
+  Estado de VS Code en Linux. Lo usan .chezmoiignore.tmpl y los scripts
+  before_05 (copia de seguridad) y after_50 (extensiones), asi nunca se
+  contradicen. Devuelve una palabra:
+    optout   existe ~/.config/Code/.dotfiles-no-manage
+    linked   ~/.config/Code o ~/.config/Code/User es un enlace simbolico
+             (chezmoi lo cambiaria por una carpeta normal)
+    sync     aun sin adoptar y se ha usado Settings Sync: espera a que
+             confirmes con DOTFILES_VSCODE_MIGRATE=sync-off
+    adopted  chezmoi ya gestiona VS Code en este equipo
+    new      aun sin adoptar: before_05 hace la copia de seguridad y lo adopta
+  En optout, linked y sync chezmoi no toca nada de ~/.config/Code (ni settings,
+  ni atajos, ni snippets, ni extensiones).
+*/ -}}
+{{- $code := joinPath .chezmoi.homeDir ".config/Code" -}}
+{{- $user := joinPath $code "User" -}}
+{{- $l1 := lstat $code -}}
+{{- $l2 := lstat $user -}}
+{{- if stat (joinPath $code ".dotfiles-no-manage") -}}
+optout
+{{- else if or (and $l1 (eq $l1.type "symlink")) (and $l2 (eq $l2.type "symlink")) -}}
+linked
+{{- else if stat (joinPath $user ".dotfiles-adopted") -}}
+adopted
+{{- else if and (stat (joinPath $user "sync")) (ne (env "DOTFILES_VSCODE_MIGRATE") "sync-off") -}}
+sync
+{{- else -}}
+new
+{{- end -}}
